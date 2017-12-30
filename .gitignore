@@ -69,5 +69,18 @@ target/
 .ipynb_checkpoints
 .idea/
 
+#Emacs backup file
+*~
+
+.AppleDouble
+*.sublime-*
+
+# Extra yaml files
+*.yaml
+!config_template.yaml
+
+# Profile zip file
+profile.zip
+
 #Project specific
 polyinterface

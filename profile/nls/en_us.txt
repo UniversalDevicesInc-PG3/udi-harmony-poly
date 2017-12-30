@@ -1,8 +1,0 @@
-# controller
-ND-controller-NAME = My NodeServer Controller
-CMD-ctl-DISCOVER-NAME = Re-Discover
-ST-ctl-ST-NAME = NodeServer Online
-
-# mynodetype
-ND-mynodetype-NAME = My Node
-ST-mynode-ST-NAME = Power

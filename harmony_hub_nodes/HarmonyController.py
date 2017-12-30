@@ -6,7 +6,14 @@
 #
 
 import polyinterface
+import json
 from harmony_hub_nodes import HarmonyHub
+from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
+LOGGER = polyinterface.LOGGER
+
+# Read the SERVER info from the json.
+SERVERDATA = json.load(open('server.json'))
+VERSION = SERVERDATA['credits'][0]['version']
 
 class Controller(polyinterface.Controller):
     """
@@ -39,6 +46,7 @@ class Controller(polyinterface.Controller):
         Super runs all the parent class necessities. You do NOT have
         to override the __init__ method, but if you do, you MUST call super.
         """
+        self.l_info('Init VERSION=%s' % VERSION)
         super(Controller, self).__init__(polyglot)
 
     def start(self):
@@ -50,7 +58,9 @@ class Controller(polyinterface.Controller):
         this is where you should start. No need to Super this method, the parent
         version does nothing.
         """
-        LOGGER.info('Started')
+        self.l_info('Started')
+        self.setDriver('GV2', VERSION_MAJOR)
+        self.setDriver('GV3', VERSION_MINOR)
         self.discover()
 
     def shortPoll(self):
@@ -96,7 +106,19 @@ class Controller(polyinterface.Controller):
         co-resident and controlled by Polyglot, it will be terminiated within 5 seconds
         of receiving this message.
         """
-        LOGGER.info('Oh God I\'m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.')
+        self.l_info('Oh God I\'m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.')
+
+    def l_info(self, name, string):
+        LOGGER.info("Main:%s: %s" %  (name,string))
+        
+    def l_error(self, name, string):
+        LOGGER.error("Main:%s: %s" % (name,string))
+        
+    def l_warning(self, name, string):
+        LOGGER.warning("Main:%s: %s" % (name,string))
+        
+    def l_debug(self, name, string):
+        LOGGER.debug("Main:%s: %s" % (name,string))
 
     """
     Optional.
@@ -106,9 +128,31 @@ class Controller(polyinterface.Controller):
     them. The ST and GV1 variables are for reporting status through Polyglot to ISY,
     DO NOT remove them. UOM 2 is boolean.
     """
-    id = 'controller'
-    commands = {'DISCOVER': discover}
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2},
-                {'driver': 'GV1', 'value': 0, 'uom': 2}]
+    id = 'HarmonyController'
+    commands = {
+        'QUERY': query,
+#        'REFRESH_CONFIG': _cmd_refresh_config,
+#        'SET_DEBUGMODE': _cmd_set_debug_mode,
+#        'SET_SHORTPOLL': _cmd_set_shortpoll,
+#        'SET_LONGPOLL':  _cmd_set_longpoll
+    }
+    """ Driver Details:
+    GV2:   float:   Version of this code (Major)
+    GV3:   float:   Version of this code (Minor)
+    GV4: integer: Number of the number of hubs we manage
+    GV5: integer: Loging Mode
+    GV6: integer: shortpoll
+    GV7: integer: longpoll
+    """
+    drivers = [
+        {'driver': 'ST', 'value': 0,  'uom': 2},
+        {'driver': 'GV1', 'value': 0, 'uom': 2},
+        {'driver': 'GV2', 'value': 0, 'uom': 56},
+        {'driver': 'GV3', 'value': 0, 'uom': 56},
+        {'driver': 'GV4', 'value': 0, 'uom': 25},
+        {'driver': 'GV5', 'value': 0, 'uom': 25},
+        {'driver': 'GV6', 'value': 0, 'uom': 25},
+        {'driver': 'GV7', 'value': 0, 'uom': 25}
+    ]
 
 

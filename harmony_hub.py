@@ -28,9 +28,8 @@ logs/debug.log
 You can use LOGGER.info, LOGGER.warning, LOGGER.debug, LOGGER.error levels as needed.
 """
 
-# Harmony Hub Modules
+# Harmony Hub Main Controller
 from harmony_hub_nodes import HarmonyController
-from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
 
 if __name__ == "__main__":
     try:

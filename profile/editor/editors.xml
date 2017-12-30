@@ -1,6 +1,29 @@
+
 <editors>
-    <!-- Boolean -->
-    <editor id="bool">
-        <range uom="2" />
-    </editor>
+
+  <editor id="HUBST">
+    <range uom="25" subset="0,1" nls="HUBST"/>
+  </editor>
+  
+  <editor id="ACTST">
+    <range uom="25" subset="0,1" nls="ACTST"/>
+  </editor>
+  
+  <editor id="INTEGER">
+    <range uom="25" min="0" max="1000" prec="0" />
+  </editor>
+
+  <editor id="CHANNEL">
+    <range uom="25" min="0" max="9999" prec="0" />
+  </editor>
+
+  <editor id="FLOAT">
+    <range uom="56" min="0.1" max="999.999"/>
+  </editor>
+
+  <!-- Log Debug Mode -->
+  <editor id="DEBUGMODE">
+    <range uom="25" subset="0,10,20,30,40,50" nls="CDM" />
+  </editor>
+
 </editors>
