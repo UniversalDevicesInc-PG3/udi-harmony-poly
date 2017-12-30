@@ -1,21 +1,29 @@
 {
-    "name": "PythonTemplate",
-    "docs": "https://github.com/Einstein42/udi-poly-template-python",
+    "name": "HarmonyHub",
+    "docs": "https://github.com/jimboca/udi-harmony-poly",
     "type": "python",
-    "executable": "name-poly.py",
+    "executable": "harmony_hub.py",
     "install": "install.sh",
-    "description": "My Node Server",
+    "description": "Connect Harmony Hub's to the ISY994",
     "notice": "Your disclaimer here",
     "shortPoll": "5",
     "longPoll": "60",
     "credits": [
         {
-            "title": "mypoly: a NodeServer for My Integration",
-            "author": "Your Name Here",
-            "version": "2.0.1",
-            "date": "November 8, 2017",
-            "source": "https://github.com/Einstein42/udi-poly-template-python",
-            "license": "https://raw.githubusercontent.com/Einstein42/udi-poly-template-python/master/LICENSE"
+            "title": "udi-harmony-poly: A NodeServer for For Harmony Hub and ISY Integration",
+            "author": "JimBo",
+            "version": "2.0.0",
+            "date": "December 29, 2017",
+            "source": "https://github.com/jimboca/udi-harmony-poly",
+            "license": "https://github.com/jimboca/udi-harmony-poly/LICENSE"
+        },
+        {
+            "title": "Library: pyharmony",
+            "author": "Author: Ian Day",
+            "version": "1.0.12",
+            "date": "2016-11-26",
+            "source": "https://github.com/iandday/pyharmony",
+            "license": "BSD-3-Clause"
         }
     ]
 }
