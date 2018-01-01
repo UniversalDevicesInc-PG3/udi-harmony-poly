@@ -79,8 +79,6 @@ target/
 *.yaml
 !config_template.yaml
 
-# Profile zip file
-profile.zip
 #Project specific
 polyinterface
 # These are generated, so never commit

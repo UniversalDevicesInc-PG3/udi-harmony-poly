@@ -116,7 +116,7 @@ for key in config_data:
         nodedef.write("\n  <!-- === %s -->\n" % (info))
         nodedef.write(NODEDEF_TMPL_ACTIVITY % (key, 'HARMONYHUB', 'Act' + key, 'Act' + key, 'GV3'))
         nls.write("\n# %s" % (info))
-        nls.write(NLS_NODE_TMPL % (key.lower(), name, key.lower()))
+        nls.write(NLS_NODE_TMPL % (key, name, key))
         #
         # Connect to the hub and get the configuration
         print(pfx + " Initializing Client")

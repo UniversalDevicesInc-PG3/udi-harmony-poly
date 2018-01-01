@@ -14,6 +14,15 @@ all: ${ZIP_FILE}
 config: ${CONFIG_FILE}
 profile: ${ZIP_FILE}
 
+profile_default:
+	echo '0.0.0' > profile/version.txt
+	rm -f profile/nls/en_us.txt
+	cp profile/nls/en_us.tmpl profile/nls/en_us.txt
+	rm -f profile/*/custom*
+	rm ${ZIP_FILE}
+	${MAKE} profile
+
+
 #
 # Run xmlint on all xml files
 #

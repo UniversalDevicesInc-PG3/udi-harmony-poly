@@ -123,7 +123,7 @@ class HarmonyController(polyinterface.Controller):
                     self.l_error('discover','failed to parse cfg={0}'.format(cfg))
                 if 'name' in cfgd:
                     if 'host' in cfgd:
-                        self.addNode(HarmonyHub(self, address.lower(), cfgd['name'], cfgd['host']))
+                        self.addNode(HarmonyHub(self, address, cfgd['name'], cfgd['host']))
 
     def delete(self):
         """

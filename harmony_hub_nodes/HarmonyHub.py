@@ -33,8 +33,10 @@ class HarmonyHub(polyinterface.Node):
         :param name: This nodes name
         """
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
+        # The id using the original case of the string
         self.id = address
-        super(HarmonyHub, self).__init__(controller, address, address, name)
+        # But here we pass the lowercase, cause ISY doesn't allow the upper case!
+        super(HarmonyHub, self).__init__(controller, address.lower(), address.lower(), name)
         self.name   = name
         self.host   = host
 
