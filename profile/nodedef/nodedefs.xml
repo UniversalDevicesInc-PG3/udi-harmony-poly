@@ -16,6 +16,8 @@
       <st id="GV5" editor="INTEGER" />
       <!-- longpoll -->
       <st id="GV6" editor="INTEGER" />
+      <!-- profile status -->
+      <st id="GV7" editor="INTEGER" />
     </sts>
     <cmds>
       <sends>
