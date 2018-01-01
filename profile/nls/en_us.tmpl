@@ -1,20 +1,21 @@
 #
-# Main Harmony Hub Server
+# Main Harmony Hub Controller
 #
-ND-HarmonyServer-NAME = Harmony Hub Server 0.0.1
-ND-HarmonyServer-ICON = Input
-ST-HARMONYSERVER-ST-NAME = Status
-ST-HARMONYSERVER-GV1-NAME = Version Major
-ST-HARMONYSERVER-GV2-NAME = Version Minor
-ST-HARMONYSERVER-GV3-NAME = Hubs
-ST-HARMONYSERVER-GV4-NAME = Debug Mode
-ST-HARMONYSERVER-GV5-NAME = Short Poll
-ST-HARMONYSERVER-GV6-NAME = Long Poll
+ND-HH_CNTL-NAME = Harmony Hub Controller 2.0.0
+ND-HH_CNTL-ICON = Input
+ST-HHCNTL-ST-NAME = Node Server Connected
+ST-HHCNTL-GV1-NAME = Version Major
+ST-HHCNTL-GV2-NAME = Version Minor
+ST-HHCNTL-GV3-NAME = Hubs
+ST-HHCNTL-GV4-NAME = Debug Mode
+ST-HHCNTL-GV5-NAME = Short Poll
+ST-HHCNTL-GV6-NAME = Long Poll
+ST-HHCNTL-GV7-NAME = Profile Status
 
 CMD-REFRESH_CONFIG-NAME = Refresh Config
-CMD-BUILD_PROFILES-NAME = Build Profiles
-CMD-HARMONYSERVER-SET_SHORTPOLL-NAME = Short Poll
-CMD-HARMONYSERVER-SET_LONGPOLL-NAME = Long Poll
+CMD-BUILD_PROFILES-NAME = Build Profile
+CMD-HHCNTL-SET_SHORTPOLL-NAME = Short Poll
+CMD-HHCNTL-SET_LONGPOLL-NAME = Long Poll
 
 HUBST-0 = False
 HUBST-1 = True
@@ -59,167 +60,3 @@ CMD-HARMONYACTIVITY-DOF-NAME = End
 
 ACTST-0 = False
 ACTST-1 = True
-
-
-# Below is generated from the harmony hubs by write_profile.py
-
-# Hub: MasterBedroom 'HarmonyHub MasterBedroom'
-ND-MasterBedroom-NAME = HarmonyHub MasterBedroom
-ND-MasterBedroom-ICON = Input
-# The index number is the matching list info->activities index
-# The activity id's are uniq across all hubs so we share the same list
-MASTERBEDROOM-0 = Power Off
-MASTERBEDROOM-1 = TiVo
-MASTERBEDROOM-2 = DVD
-MASTERBEDROOM-3 = Chromecast
-MASTERBEDROOM-4 = Fire TV
-
-# Device 'Pioneer TV', Type=Television, Manufacturer=Pioneer, Model=PDP-5070HD
-ND-d31347323-NAME = Pioneer TV
-ND-d31347323-ICON = Input
-
-# Device 'Sony Amp', Type=Amplifier, Manufacturer=Sony, Model=HT-CT150
-ND-d31347557-NAME = Sony Amp
-ND-d31347557-ICON = Input
-
-# Device 'Amazon Fire TV', Type=Default, Manufacturer=Amazon, Model=Fire TV
-ND-d41336071-NAME = Amazon Fire TV
-ND-d41336071-ICON = Input
-
-# Device 'Sony DVD', Type=DVD, Manufacturer=Sony, Model=BDP-S580
-ND-d31347379-NAME = Sony DVD
-ND-d31347379-ICON = Input
-
-# Device 'IQAir Climate Control', Type=ClimateControl, Manufacturer=IQAir, Model=HealthPro
-ND-d34201219-NAME = IQAir Climate Control
-ND-d34201219-ICON = Input
-
-# Device 'Kinivo AV Switch', Type=AudioVideoSwitch, Manufacturer=Kinivo, Model=K500
-ND-d33416282-NAME = Kinivo AV Switch
-ND-d33416282-ICON = Input
-
-# Device 'Google Media Player', Type=MediaCenterPC, Manufacturer=Google, Model=Chromecast
-ND-d31347642-NAME = Google Media Player
-ND-d31347642-ICON = Input
-
-# Device 'TiVo DVR', Type=PVR, Manufacturer=TiVo, Model=TCDA93000
-ND-d31347608-NAME = TiVo DVR
-ND-d31347608-ICON = Input
-
-
-BTN-0 = PowerOff
-BTN-1 = PowerOn
-BTN-2 = PowerToggle
-BTN-3 = NumberEnter
-BTN-4 = Dot
-BTN-5 = Number0
-BTN-6 = Number1
-BTN-7 = Number2
-BTN-8 = Number3
-BTN-9 = Number4
-BTN-10 = Number5
-BTN-11 = Number6
-BTN-12 = Number7
-BTN-13 = Number8
-BTN-14 = Number9
-BTN-15 = Mute
-BTN-16 = VolumeDown
-BTN-17 = VolumeUp
-BTN-18 = PrevChannel
-BTN-19 = ChannelDown
-BTN-20 = ChannelUp
-BTN-21 = DirectionDown
-BTN-22 = DirectionLeft
-BTN-23 = DirectionRight
-BTN-24 = DirectionUp
-BTN-25 = Select
-BTN-26 = Return
-BTN-27 = Menu
-BTN-28 = PipSwap
-BTN-29 = PipToggle
-BTN-30 = Sleep
-BTN-31 = Green
-BTN-32 = Red
-BTN-33 = Blue
-BTN-34 = Yellow
-BTN-35 = Guide
-BTN-36 = Info
-BTN-37 = PageDown
-BTN-38 = PageUp
-BTN-39 = Aspect
-BTN-40 = Display
-BTN-41 = AvMode
-BTN-42 = DayDown
-BTN-43 = DayUp
-BTN-44 = FavoriteChA
-BTN-45 = FavoriteChB
-BTN-46 = FavoriteChC
-BTN-47 = FavoriteChD
-BTN-48 = HomeMenu
-BTN-49 = InputAntennaA/B
-BTN-50 = InputPc
-BTN-51 = InputVideo1
-BTN-52 = InputVideo2
-BTN-53 = InputVideo3
-BTN-54 = InputVideo4
-BTN-55 = InputVideo5
-BTN-56 = InputVideo6
-BTN-57 = MTS
-BTN-58 = PipFreeze
-BTN-59 = PipShift
-BTN-60 = AmpMenu
-BTN-61 = InputBd
-BTN-62 = InputDmPort
-BTN-63 = InputDVD
-BTN-64 = InputSa-Cd/Cd
-BTN-65 = InputSat/Catv
-BTN-66 = InputTv
-BTN-67 = InputVideo
-BTN-68 = NightMode
-BTN-69 = SoundFieldDown
-BTN-70 = SoundFieldUp
-BTN-71 = Stop
-BTN-72 = Play
-BTN-73 = Rewind
-BTN-74 = Pause
-BTN-75 = FastForward
-BTN-76 = SkipBackward
-BTN-77 = SkipForward
-BTN-78 = Back
-BTN-79 = Search
-BTN-80 = Exit
-BTN-81 = Delete
-BTN-82 = Home
-BTN-83 = Eject
-BTN-84 = TopMenu
-BTN-85 = Subtitle
-BTN-86 = Audio
-BTN-87 = Favorite
-BTN-88 = Netflix
-BTN-89 = Options
-BTN-90 = PopUp
-BTN-91 = Qriocity
-BTN-92 = Speed 1
-BTN-93 = Speed 2
-BTN-94 = Speed 3
-BTN-95 = Speed 4
-BTN-96 = Input1
-BTN-97 = Input2
-BTN-98 = Input3
-BTN-99 = Input4
-BTN-100 = Input5
-BTN-101 = Hyphen
-BTN-102 = Clear
-BTN-103 = Record
-BTN-104 = FrameAdvance
-BTN-105 = C
-BTN-106 = B
-BTN-107 = D
-BTN-108 = A
-BTN-109 = Live
-BTN-110 = ThumbsDown
-BTN-111 = ThumbsUp
-BTN-112 = TiVo
-BTN-113 = Zoom
-BTN-114 = Input
-BTN-115 = Swap

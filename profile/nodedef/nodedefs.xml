@@ -1,6 +1,6 @@
 <nodeDefs>
-  <!-- === Harmony Nub Server Holds all Hub Nodes ========================================  -->
-  <nodeDef id="HarmonyServer" nodeType="139" nls="HARMONYSERVER">
+  <!-- === Harmony Hub Controller is the main node  ========================================  -->
+  <nodeDef id="HH_CNTL" nodeType="139" nls="HHCNTL">
     <sts>
       <!-- Device Status -->
       <st id="ST" editor="INTEGER" />

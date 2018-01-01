@@ -30,3 +30,5 @@ ${ZIP_FILE}: ${ZIP_FILES}
 .PHONY: ${CONFIG_FILE}
 ${CONFIG_FILE}:
 	./write_profile.py
+
+profile/nls/*.txt: profile/nls/*.tmpl

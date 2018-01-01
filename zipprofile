@@ -1,7 +1,0 @@
-#!/bin/bash
-rm profile.zip
-cd profile
-zip -r profile.zip *
-mv profile.zip ..
-cd ..
-

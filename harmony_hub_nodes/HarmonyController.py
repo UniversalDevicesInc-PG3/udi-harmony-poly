@@ -2,20 +2,29 @@
 # HarmonyController
 #
 # This is the main Harmony Hub Node Controller  
-#
+# Add a Configuration Parameter:
+# Key=hub_FamilyRoom
+# Value={ "name": "HarmonyHub FamilyRoom", "host": "192.168.86.82" }
+# Key=hub_MasterBedroom
+# Value={ "name": "HarmonyHub MasterBedroom", "host": "192.168.86.80" }
 #
 
 import polyinterface
-import json
+import json,re
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
 LOGGER = polyinterface.LOGGER
 
 # Read the SERVER info from the json.
-SERVERDATA = json.load(open('server.json'))
-VERSION = SERVERDATA['credits'][0]['version']
+with open('server.json') as data:
+    SERVERDATA = json.load(data)
+try:
+    VERSION = SERVERDATA['credits'][0]['version']
+except (KeyError, ValueError):
+    LOGGER.info('Version not found in server.json.')
+    VERSION = '0.0.0'
 
-class Controller(polyinterface.Controller):
+class HarmonyController(polyinterface.Controller):
     """
     The Controller Class is the primary node from an ISY perspective. It is a Superclass
     of polyinterface.Node so all methods from polyinterface.Node are available to this
@@ -46,8 +55,11 @@ class Controller(polyinterface.Controller):
         Super runs all the parent class necessities. You do NOT have
         to override the __init__ method, but if you do, you MUST call super.
         """
-        self.l_info('Init VERSION=%s' % VERSION)
-        super(Controller, self).__init__(polyglot)
+        self.l_info('init','Initializing VERSION=%s' % (VERSION))
+        super(HarmonyController, self).__init__(polyglot)
+        self.name = 'HarmonyHub Controller'
+        self.address = 'harmonyctrl'
+        self.primary = self.address
 
     def start(self):
         """
@@ -58,9 +70,11 @@ class Controller(polyinterface.Controller):
         this is where you should start. No need to Super this method, the parent
         version does nothing.
         """
-        self.l_info('Started')
-        self.setDriver('GV2', VERSION_MAJOR)
-        self.setDriver('GV3', VERSION_MINOR)
+        self.l_info('start','Starting')
+        self.setDriver('GV1', VERSION_MAJOR)
+        self.setDriver('GV2', VERSION_MINOR)
+        # TODO: get client id from pyharmony here?  Or inside Hub?
+        # if self._getToken():
         self.discover()
 
     def shortPoll(self):
@@ -97,7 +111,19 @@ class Controller(polyinterface.Controller):
         Do discovery here. Does not have to be called discovery. Called from example
         controller start method and from DISCOVER command recieved from ISY as an exmaple.
         """
-        self.addNode(MyNode(self, self.address, 'myaddress', 'My Node Name'))
+        for param in self.polyConfig['customParams']:
+            match = re.match( "hub_(.*)", param, re.I)
+            if match is not None:
+                address = match.group(1)
+                self.l_info('discover','got param {0} address={1}'.format(param,address))
+                cfg = self.polyConfig['customParams'][param]
+                try:
+                    cfgd = json.loads(cfg)
+                except:
+                    self.l_error('discover','failed to parse cfg={0}'.format(cfg))
+                if 'name' in cfgd:
+                    if 'host' in cfgd:
+                        self.addNode(HarmonyHub(self, address.lower(), cfgd['name'], cfgd['host']))
 
     def delete(self):
         """
@@ -106,7 +132,7 @@ class Controller(polyinterface.Controller):
         co-resident and controlled by Polyglot, it will be terminiated within 5 seconds
         of receiving this message.
         """
-        self.l_info('Oh God I\'m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.')
+        self.l_info('delete','Oh God I\'m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.')
 
     def l_info(self, name, string):
         LOGGER.info("Main:%s: %s" %  (name,string))
@@ -128,7 +154,7 @@ class Controller(polyinterface.Controller):
     them. The ST and GV1 variables are for reporting status through Polyglot to ISY,
     DO NOT remove them. UOM 2 is boolean.
     """
-    id = 'HarmonyController'
+    id = 'HH_CNTL'
     commands = {
         'QUERY': query,
 #        'REFRESH_CONFIG': _cmd_refresh_config,
@@ -137,22 +163,21 @@ class Controller(polyinterface.Controller):
 #        'SET_LONGPOLL':  _cmd_set_longpoll
     }
     """ Driver Details:
-    GV2:   float:   Version of this code (Major)
-    GV3:   float:   Version of this code (Minor)
-    GV4: integer: Number of the number of hubs we manage
-    GV5: integer: Loging Mode
-    GV6: integer: shortpoll
-    GV7: integer: longpoll
+    GV1:  
+    GV2:
+    GV3:
+    GV4:
+    GV5:
+    GV6:
+    GV7:
     """
     drivers = [
-        {'driver': 'ST', 'value': 0,  'uom': 2},
-        {'driver': 'GV1', 'value': 0, 'uom': 2},
-        {'driver': 'GV2', 'value': 0, 'uom': 56},
-        {'driver': 'GV3', 'value': 0, 'uom': 56},
-        {'driver': 'GV4', 'value': 0, 'uom': 25},
-        {'driver': 'GV5', 'value': 0, 'uom': 25},
-        {'driver': 'GV6', 'value': 0, 'uom': 25},
-        {'driver': 'GV7', 'value': 0, 'uom': 25}
+        {'driver': 'ST',  'value': 0, 'uom': 2},  #   float:   Version of this code (Major)
+        {'driver': 'GV1', 'value': 0, 'uom': 56}, #   float:   Version of this code (Minor)
+        {'driver': 'GV2', 'value': 0, 'uom': 56}, # integer: Number of the number of hubs we manage
+        {'driver': 'GV3', 'value': 0, 'uom': 25}, # integer: Loging Mode
+        {'driver': 'GV4', 'value': 0, 'uom': 25}, # integer: shortpoll
+        {'driver': 'GV5', 'value': 0, 'uom': 25}, # integer: longpoll
+        {'driver': 'GV6', 'value': 0, 'uom': 25}, #    bool: Profile status
+        {'driver': 'GV7', 'value': 0, 'uom': 2}   #
     ]
-
-

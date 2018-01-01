@@ -76,28 +76,16 @@ NLS_TMPL = "%s-%d = %s\n"
 #
 # Remove our old data from the nls file if present
 #
-nls_file = "profile/nls/en_US.txt"
-nls = open(nls_file, "r")
-found = False
-nls_lines = []
-split_line = "# Below is generated from the harmony hubs by write_profile.py"
-p = re.compile(split_line)
-for line in nls:
-    if not found:
-        if p.match(line):
-            found = True
-        else:
-            nls_lines.append(line)
-nls.close()
+nls_tmpl = open("profile/nls/en_us.tmpl", "r")
+nls      = open("profile/nls/en_us.txt",  "w")
+for line in nls_tmpl:
+    nls.write(line)
+nls_tmpl.close()
 
 nodedef = open("profile/nodedef/custom.xml", "w")
 editor  = open("profile/editor/custom.xml", "w")
-nls     = open(nls_file, "w")
-for line in nls_lines:
-    nls.write(line)
-nls.write(split_line+"\n")
-editor.write("<editors>\n")
 nodedef.write("<nodeDefs>\n")
+editor.write("<editors>\n")
 
 #
 # This is all the activities available for all hubs.
@@ -128,7 +116,7 @@ for key in config_data:
         nodedef.write("\n  <!-- === %s -->\n" % (info))
         nodedef.write(NODEDEF_TMPL_ACTIVITY % (key, 'HARMONYHUB', 'Act' + key, 'Act' + key, 'GV3'))
         nls.write("\n# %s" % (info))
-        nls.write(NLS_NODE_TMPL % (key, name, key))
+        nls.write(NLS_NODE_TMPL % (key.lower(), name, key.lower()))
         #
         # Connect to the hub and get the configuration
         print(pfx + " Initializing Client")

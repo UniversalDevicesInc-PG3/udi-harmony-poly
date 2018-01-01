@@ -1,8 +1,7 @@
 
 import polyinterface
-from harmony_hub_nodes import HarmonyDevice #HarmonyActivity
 
-class HarmonyHub(polyinterface.Node):
+class HarmonyDevice(polyinterface.Node):
     """
     This is the class that all the Nodes will be represented by. You will add this to
     Polyglot/ISY with the controller.addNode method.
@@ -21,7 +20,7 @@ class HarmonyHub(polyinterface.Node):
     reportDrivers(): Forces a full update of all drivers to Polyglot/ISY.
     query(): Called when ISY sends a query request to Polyglot for this specific node
     """
-    def __init__(self, controller, address, name, host):
+    def __init__(self, controller, primary, address, name):
         """
         Optional.
         Super runs all the parent class necessities. You do NOT have
@@ -34,9 +33,9 @@ class HarmonyHub(polyinterface.Node):
         """
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
         self.id = address
-        super(HarmonyHub, self).__init__(controller, address, address, name)
+        #self.parent = parent
         self.name   = name
-        self.host   = host
+        super(HarmonyDevice, self).__init__(controller, primary.address, address, name)
 
     def start(self):
         """
@@ -45,7 +44,6 @@ class HarmonyHub(polyinterface.Node):
         and we get a return result from Polyglot.
         """
         self.setDriver('ST', 1)
-        self.add_devices()
 
     def setOn(self, command):
         """
@@ -71,9 +69,6 @@ class HarmonyHub(polyinterface.Node):
         """
         self.reportDrivers()
 
-    def add_devices(self):
-        self.controller.addNode(HarmonyDevice(self.controller, self, 'd46754012', 'AV Receiver'))
-        
 
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 2}]
     """
@@ -83,7 +78,7 @@ class HarmonyHub(polyinterface.Node):
     of variable to display. Check the UOM's in the WSDK for a complete list.
     UOM 2 is boolean so the ISY will display 'True/False'
     """
-    id = 'HubDefault'
+    id = 'HarmonyDevice'
     """
     id of the node from the nodedefs.xml that is in the profile.zip. This tells
     the ISY what fields and commands this node has.

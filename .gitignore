@@ -83,3 +83,6 @@ target/
 profile.zip
 #Project specific
 polyinterface
+# These are generated, so never commit
+profile/*/custom*.xml
+profile/nls/en_us.txt

@@ -41,7 +41,7 @@ if __name__ == "__main__":
         """
         Starts MQTT and connects to Polyglot.
         """
-        control = Controller(polyglot)
+        control = HarmonyController(polyglot)
         """
         Creates the Controller Node and passes in the Interface
         """
