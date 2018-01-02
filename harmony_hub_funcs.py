@@ -1,5 +1,5 @@
 
-from pyharmony import ha_get_token,ha_get_client
+from pyharmony import ha_get_client
 import os,socket,struct
 
 def myint(value):
@@ -54,6 +54,8 @@ def toggleBit(int_type, offset):
     return(int_type ^ mask)
 
 def harmony_hub_client(host, port=5222):
-    token  = ha_get_token(host, port)
-    client = ha_get_client(token, host, port)
+    client = ha_get_client(host, port)
     return client
+
+def uuid_to_address(uuid):
+    return uuid[-12:]

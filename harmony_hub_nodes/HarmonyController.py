@@ -10,9 +10,12 @@
 #
 
 import polyinterface
-import json,re
+import json,re,time,sys
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
+from harmony_hub_funcs import uuid_to_address
+from write_profile import write_profile
+
 LOGGER = polyinterface.LOGGER
 
 # Read the SERVER info from the json.
@@ -73,9 +76,10 @@ class HarmonyController(polyinterface.Controller):
         self.l_info('start','Starting')
         self.setDriver('GV1', VERSION_MAJOR)
         self.setDriver('GV2', VERSION_MINOR)
-        # TODO: get client id from pyharmony here?  Or inside Hub?
-        # if self._getToken():
-        self.discover()
+        # Setup Profile Status as Up To Date
+        # TODO: Need a way to know this...
+        # TODO: Get driver, only if it's reboot required, then set to 1?
+        self.setDriver('GV7', 1) 
 
     def shortPoll(self):
         """
@@ -111,6 +115,29 @@ class HarmonyController(polyinterface.Controller):
         Do discovery here. Does not have to be called discovery. Called from example
         controller start method and from DISCOVER command recieved from ISY as an exmaple.
         """
+        hub_list = list()
+        self._set_num_hubs(0)
+        #
+        # Look for the hubs...
+        #
+        self.setDriver('GV7', 2)
+        self.l_info('discover','harmony_discover: starting...')
+        from pyharmony import discovery as harmony_discovery
+        harmony_discovery.logger = LOGGER
+        try:
+            res = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
+        except (OSError) as err:
+            self.setDriver('GV7', 9)
+            self.l_error('discover','pyharmony discover failed. Please restart this nodeserver: {}'.format(err))
+            return
+        self.l_info('discover','harmony_discover: {0}'.format(res))
+        #
+        # Add the nodes
+        #
+        self.setDriver('GV7', 3)
+        #
+        # First from customParams
+        #
         for param in self.polyConfig['customParams']:
             match = re.match( "hub_(.*)", param, re.I)
             if match is not None:
@@ -120,10 +147,60 @@ class HarmonyController(polyinterface.Controller):
                 try:
                     cfgd = json.loads(cfg)
                 except:
-                    self.l_error('discover','failed to parse cfg={0}'.format(cfg))
-                if 'name' in cfgd:
-                    if 'host' in cfgd:
-                        self.addNode(HarmonyHub(self, address, cfgd['name'], cfgd['host']))
+                    err = sys.exc_info()[0]
+                    self.l_error('discover','failed to parse cfg={0} Error: {1}'.format(cfg,err))
+                addit = True
+                if not 'name' in cfgd:
+                    self.l_error('discover','No name in customParam {0} value={1}'.format(param,cfg))
+                    addit = False
+                if not 'host' in cfgd:
+                    self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
+                    addit = False
+                if addIt:
+                    hub_list.append({'address': address, 'name': cfgd['name'], 'host': cfgd['host']})
+                    self._set_num_hubs(self.num_hubs + 1)
+                    
+        #
+        # Next the discovered ones
+        #
+        for config in res:
+            hub_list.append(
+                {
+                    'address': uuid_to_address(config['uuid']),
+                    'name':    config['friendlyName'],
+                    'host': config['ip']
+                }
+            )
+        #
+        # Now really add them.
+        #
+        for cnode in hub_list:
+            self.addNode(HarmonyHub(self, cnode['address'], cnode['name'], cnode['host']))
+            self._set_num_hubs(self.num_hubs + 1)
+        #
+        # Build the profile
+        #
+        self.setDriver('GV7', 4)
+        # This writes all the profile data files and returns our config info.
+        # TODO: Need to zip up all files...
+        config_data = write_profile(LOGGER,hub_list)
+        #
+        # Upload the profile
+        #
+        self.setDriver('GV7', 5)
+        try:
+            self.poly.installprofile()
+        except:
+            # I know... don't catch all, but I don't know what possiblities there are?
+            err = sys.exc_info()[0]
+            self.setDriver('GV7', 7)
+            self.l_error('discovery','Install Profile Error: {}'.format(err))
+            return
+        # Now a reboot is required
+        # TODO: This doesn't really mean it was complete, a response is needed from polyglot,
+        # TODO: which is on the enhancement list.
+        self.setDriver('GV7', 6)
+        
 
     def delete(self):
         """
@@ -134,6 +211,12 @@ class HarmonyController(polyinterface.Controller):
         """
         self.l_info('delete','Oh God I\'m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.')
 
+    def _set_num_hubs(self, value):
+        self.num_hubs = value
+        self.l_info("_set_num_hubs","{}".format(self.num_hubs))
+        self.setDriver('GV3', self.num_hubs)
+        return True
+    
     def l_info(self, name, string):
         LOGGER.info("Main:%s: %s" %  (name,string))
         
@@ -154,30 +237,25 @@ class HarmonyController(polyinterface.Controller):
     them. The ST and GV1 variables are for reporting status through Polyglot to ISY,
     DO NOT remove them. UOM 2 is boolean.
     """
-    id = 'HH_CNTL'
+    id = 'HarmonyController'
     commands = {
         'QUERY': query,
+        'DISCOVER': discover,
 #        'REFRESH_CONFIG': _cmd_refresh_config,
 #        'SET_DEBUGMODE': _cmd_set_debug_mode,
 #        'SET_SHORTPOLL': _cmd_set_shortpoll,
 #        'SET_LONGPOLL':  _cmd_set_longpoll
     }
-    """ Driver Details:
-    GV1:  
-    GV2:
-    GV3:
-    GV4:
-    GV5:
-    GV6:
-    GV7:
+    """ 
+       Driver Details:
     """
     drivers = [
-        {'driver': 'ST',  'value': 0, 'uom': 2},  #   float:   Version of this code (Major)
-        {'driver': 'GV1', 'value': 0, 'uom': 56}, #   float:   Version of this code (Minor)
-        {'driver': 'GV2', 'value': 0, 'uom': 56}, # integer: Number of the number of hubs we manage
-        {'driver': 'GV3', 'value': 0, 'uom': 25}, # integer: Loging Mode
-        {'driver': 'GV4', 'value': 0, 'uom': 25}, # integer: shortpoll
-        {'driver': 'GV5', 'value': 0, 'uom': 25}, # integer: longpoll
-        {'driver': 'GV6', 'value': 0, 'uom': 25}, #    bool: Profile status
-        {'driver': 'GV7', 'value': 0, 'uom': 2}   #
+        {'driver': 'ST',  'value': 0, 'uom': 2},  #    bool:   Connection status (managed by polyglot)
+        {'driver': 'GV1', 'value': 0, 'uom': 56}, #   float:   Version of this code (Major)
+        {'driver': 'GV2', 'value': 0, 'uom': 56}, #   float:   Version of this code (Minor)
+        {'driver': 'GV3', 'value': 0, 'uom': 25}, # integer: Number of the number of hubs we manage
+        {'driver': 'GV4', 'value': 0, 'uom': 25}, # integer: Log/Debug Mode
+        {'driver': 'GV5', 'value': 0, 'uom': 25}, # integer: shortpoll
+        {'driver': 'GV6', 'value': 0, 'uom': 25}, # integer: longpoll
+        {'driver': 'GV7', 'value': 0, 'uom': 25}  #    bool: Profile status
     ]

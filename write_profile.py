@@ -1,14 +1,15 @@
 #!/usr/bin/python
 
-import yaml,collections,re
+import yaml,collections,re,os,zipfile
 from harmony_hub_funcs import harmony_hub_client
 
 pfx = "write_profile:"
 
 config_file_name = 'config.yaml'
-config_file = open(config_file_name, 'r')
-config_data = yaml.load(config_file)
-config_file.close
+
+#config_file = open(config_file_name, 'r')
+#config_data = yaml.load(config_file)
+#config_file.close
 
 # TODO: Check that server node & name are defined.
 #if 'server' in config and config['host'] is not None:
@@ -73,60 +74,61 @@ ND-%s-ICON = Input
 # The NLS entry for each indexed item
 NLS_TMPL = "%s-%d = %s\n"
 
-#
-# Remove our old data from the nls file if present
-#
-nls_tmpl = open("profile/nls/en_us.tmpl", "r")
-nls      = open("profile/nls/en_us.txt",  "w")
-for line in nls_tmpl:
-    nls.write(line)
-nls_tmpl.close()
+def write_profile(logger,hub_list):
+    config_data = {}
+    #
+    # Start the nls with the template data.
+    #
+    nls_tmpl = open("profile/nls/en_us.tmpl", "r")
+    nls      = open("profile/nls/en_us.txt",  "w")
+    for line in nls_tmpl:
+        nls.write(line)
+    nls_tmpl.close()
 
-nodedef = open("profile/nodedef/custom.xml", "w")
-editor  = open("profile/editor/custom.xml", "w")
-nodedef.write("<nodeDefs>\n")
-editor.write("<editors>\n")
+    nodedef = open("profile/nodedef/custom.xml", "w")
+    editor  = open("profile/editor/custom.xml", "w")
+    nodedef.write("<nodeDefs>\n")
+    editor.write("<editors>\n")
 
-#
-# This is all the activities available for all hubs.
-#
-activites = collections.OrderedDict()
-ai = 0
-#
-# This is all the button functions available for all devices.
-#
-buttons = collections.OrderedDict()
-bi = 0
-#
-# Loop over each Hub in the config data.
-#
-config_data['info'] = dict()
-config_data['info']['activities'] = list()
-config_data['info']['functions'] = list()
-warn_string_1 = ""
-for key in config_data:
-    # Ignore server.
-    if key != 'server' and key != 'info':
+    #
+    # This is all the activities available for all hubs.
+    #
+    activites = collections.OrderedDict()
+    ai = 0
+    #
+    # This is all the button functions available for all devices.
+    #
+    buttons = collections.OrderedDict()
+    bi = 0
+    #
+    # Loop over each Hub in the config data.
+    #
+    config_data['info'] = dict()
+    config_data['info']['activities'] = list()
+    config_data['info']['functions'] = list()
+    warn_string_1 = ""
+    for ahub in hub_list:
         #
         # Process this hub.
         #
-        host = config_data[key]['host']
-        name = config_data[key]['name']
-        info = "Hub: %s '%s'" % (key,name)
+        address  = ahub['address']
+        host = ahub['host']
+        name = ahub['name']
+        info = "Hub: %s '%s'" % (address,name)
         nodedef.write("\n  <!-- === %s -->\n" % (info))
-        nodedef.write(NODEDEF_TMPL_ACTIVITY % (key, 'HARMONYHUB', 'Act' + key, 'Act' + key, 'GV3'))
+        nodedef.write(NODEDEF_TMPL_ACTIVITY % (address, 'HARMONYHUB', 'Act' + address, 'Act' + address, 'GV3'))
         nls.write("\n# %s" % (info))
-        nls.write(NLS_NODE_TMPL % (key, name, key))
+        nls.write(NLS_NODE_TMPL % (address, name, address))
         #
         # Connect to the hub and get the configuration
-        print(pfx + " Initializing Client")
+        logger.info("{0} Initializing Client for {1} {2} {3}".format(pfx,address,name,host))
         client = harmony_hub_client(host=host)
-        print(pfx + " Client: " + str(client))
+        logger.info(pfx + " Client: " + str(client))
         harmony_config = client.get_config()
         client.disconnect(send_close=True)
         #
         # Save the config for reference.
-        harmony_config_file = key + ".yaml"
+        harmony_config_file = address + ".yaml"
         with open(harmony_config_file, 'w') as outfile:
             yaml.safe_dump(harmony_config, outfile, default_flow_style=False)
         #
@@ -136,7 +138,7 @@ for key in config_data:
         ais = ai
         nls.write("# The index number is the matching list info->activities index\n")
         nls.write("# The activity id's are uniq across all hubs so we share the same list\n")
-        nls.write(NLS_TMPL % (key.upper(), 0, 'Power Off'))
+        nls.write(NLS_TMPL % (address.upper(), 0, 'Power Off'))
         if ais == 0:
             config_data['info']['activities'].append({'label':'Power Off','id':-1});
             ai += 1
@@ -144,18 +146,18 @@ for key in config_data:
             # Skip -1 since we printed it already.
             if int(a['id']) != -1:
                 # Print the Harmony Activities to the log
-                print("%s Activity: %s  Id: %s" % (pfx, a['label'], a['id']))
+                logger.debug("%s Activity: %s  Id: %s" % (pfx, a['label'], a['id']))
                 #aname = "%s (%s)" % (a['label'],a['id'])
                 aname = str(a['label'])
                 config_data['info']['activities'].append({'label':aname,'id':int(a['id'])});
-                nls.write(NLS_TMPL % (key.upper(), ai, aname))
+                nls.write(NLS_TMPL % (address.upper(), ai, aname))
                 ai += 1
         # All activities contain zero which is power off...
         if ais == 0:
             subset = "%d-%d" % (ais, ai-1)
         else:
             subset = "0,%d-%d" % (ais, ai-1)
-        editor.write(EDITOR_TMPL_S % ('Act'+key, subset,key.upper()))
+        editor.write(EDITOR_TMPL_S % ('Act'+address, subset,address.upper()))
         #
         # Build all the devices
         #
@@ -166,7 +168,7 @@ for key in config_data:
             nodedef.write(NODEDEF_TMPL_DEVICE % ('d' + d['id'], 'D' + d['id'], 'Btn' + d['id']))
             nls.write("\n# %s" % info)
             nls.write(NLS_NODE_TMPL % ('d' + d['id'], d['label'], 'd' + d['id']))
-            print("%s   Device: %s  Id: %s" % (pfx, d['label'], d['id']))
+            logger.debug("%s   Device: %s  Id: %s" % (pfx, d['label'], d['id']))
             #
             # Build all the button functions, these are global to all devices
             #
@@ -183,7 +185,7 @@ for key in config_data:
                     else:
                         cb = buttons[bname]
                         config_data['info']['functions'][cb]['command'][str(d['id'])] = ay['command']
-                    print("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, cb, f['name'], f['label'], ay['command']))
+                    logger.debug("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, cb, f['name'], f['label'], ay['command']))
 
                     if bname != f['name']:
                         warn_string_1 += " device %s has button with label=%s, command=%s\n" % (d['label'],f['label'],ay['command'])
@@ -210,24 +212,58 @@ for key in config_data:
             editor.write(EDITOR_TMPL_S % ('Btn' + d['id'], subset_str, 'BTN'))
 
     
-nls.write("\n\n")
-for key in buttons:
-    nls.write(NLS_TMPL % ('BTN', buttons[key], key))
+    nls.write("\n\n")
+    for key in buttons:
+        nls.write(NLS_TMPL % ('BTN', buttons[key], key))
     
-editor.write("</editors>")
-nodedef.write("</nodeDefs>")
+    editor.write("</editors>")
+    nodedef.write("</nodeDefs>")
             
-nodedef.close()
-editor.close()
-nls.close()
+    nodedef.close()
+    editor.close()
+    nls.close()
 
-with open(config_file_name, 'w') as outfile:
-    yaml.dump(config_data, outfile, default_flow_style=False)
+    with open(config_file_name, 'w') as outfile:
+        yaml.dump(config_data, outfile, default_flow_style=False)
     
-print(pfx + " done.")
+        logger.info(pfx + " done.")
+
+    write_profile_zip(logger)
+    
+    return(config_data)
 
 #if warn_string_1 != "":
 #    print "WARNING: If you are upgrading from 0.3.x and using any of the following in an ISY program, you will need to fix them"
 #    print warn_string_1
 
-exit
+
+def write_profile_zip(logger):
+    src = 'profile'
+    abs_src = os.path.abspath(src)
+    with zipfile.ZipFile('profile.zip', 'w') as zf:
+        for dirname, subdirs, files in os.walk(src):
+            for filename in files:
+                if filename.endswith('.xml') or filename.endswith('txt'):
+                    absname = os.path.abspath(os.path.join(dirname, filename))
+                    arcname = absname[len(abs_src) + 1:]
+                    logger.info('write_profile_zip: %s as %s' % (os.path.join(dirname, filename),
+                                                arcname))
+                    zf.write(absname, arcname)
+    zf.close()
+    
+if __name__ == "__main__":
+    import logging
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(
+        level=10,
+        format='%(levelname)s:\t%(name)s\t%(message)s'
+    )
+    logger.setLevel(logging.DEBUG)
+    write_profile(logger,
+        [
+            { "address": "familyroom", "name": "HarmonyHub FamilyRoom", "host": "192.168.86.82" },
+            { "address": "masterbedroom", "name": "HarmonyHub MasterBedroom", "host": "192.168.86.80" },
+        ]
+    )
+
+

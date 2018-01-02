@@ -74,7 +74,8 @@ class HarmonyHub(polyinterface.Node):
         self.reportDrivers()
 
     def add_devices(self):
-        self.controller.addNode(HarmonyDevice(self.controller, self, 'd46754012', 'AV Receiver'))
+        #self.controller.addNode(HarmonyDevice(self.controller, self, 'd46754012', 'AV Receiver'))
+        pass
         
 
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 2}]

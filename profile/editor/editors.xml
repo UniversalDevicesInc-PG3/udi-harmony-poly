@@ -26,4 +26,8 @@
     <range uom="25" subset="0,10,20,30,40,50" nls="CDM" />
   </editor>
 
+  <editor id="PROFILE_STATUS">
+    <range uom="25" subset="0-10" nls="PST"/>
+  </editor>
+
 </editors>

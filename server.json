@@ -1,7 +1,7 @@
 {
     "name": "HarmonyHub",
     "docs": "https://github.com/jimboca/udi-harmony-poly",
-    "type": "python",
+    "type": "python3",
     "executable": "harmony_hub.py",
     "install": "install.sh",
     "description": "Connect Harmony Hub's to the ISY994",
