@@ -33,7 +33,7 @@ from harmony_hub_nodes import HarmonyController
 
 if __name__ == "__main__":
     try:
-        polyglot = polyinterface.Interface('MyNodeServer')
+        polyglot = polyinterface.Interface('HarmonyHub')
         """
         Instantiates the Interface to Polyglot.
         """

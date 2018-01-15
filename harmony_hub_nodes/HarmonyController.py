@@ -1,6 +1,10 @@
 #
 # HarmonyController
 #
+# TODO:
+# - discover should check if hub IP address has changed?
+# - Set longpoll from our driver. (need getDriver)
+#
 # This is the main Harmony Hub Node Controller  
 # Add a Configuration Parameter:
 # Key=hub_FamilyRoom
@@ -11,9 +15,10 @@
 
 import polyinterface
 import json,re,time,sys
+from traceback import format_exception
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
-from harmony_hub_funcs import uuid_to_address
+from harmony_hub_funcs import uuid_to_address,long2ip
 from write_profile import write_profile
 
 LOGGER = polyinterface.LOGGER
@@ -60,10 +65,11 @@ class HarmonyController(polyinterface.Controller):
         """
         self.l_info('init','Initializing VERSION=%s' % (VERSION))
         super(HarmonyController, self).__init__(polyglot)
+        self.l_debug('init','Config=%s' % (self.polyConfig))
         self.name = 'HarmonyHub Controller'
         self.address = 'harmonyctrl'
         self.primary = self.address
-
+        
     def start(self):
         """
         Optional.
@@ -76,10 +82,28 @@ class HarmonyController(polyinterface.Controller):
         self.l_info('start','Starting')
         self.setDriver('GV1', VERSION_MAJOR)
         self.setDriver('GV2', VERSION_MINOR)
-        # Setup Profile Status as Up To Date
+        # Set Profile Status as Up To Date
         # TODO: Need a way to know this...
         # TODO: Get driver, only if it's reboot required, then set to 1?
-        self.setDriver('GV7', 1) 
+        self.setDriver('GV7', 1)
+        #
+        #
+        self.l_debug("start","longPoll={}".format(self.polyConfig['longPoll']))
+        #
+        # Add Hubs from the config
+        #
+        self.l_debug("start","Adding hubs...")
+        self._set_num_hubs(0)
+        #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
+        if self.polyConfig['nodes']:
+            for item in self.polyConfig['nodes']:
+                if item['isprimary'] and item['node_def_id'] != self.id:
+                    self.l_debug("start","adding hub for item={}".format(item))
+                    self.add_hub_from_customData(item['address'])
+        else:
+            # No nodes exist, that means this is the first time we have been run after install
+            # So, do a discover
+            self.discover()
 
     def shortPoll(self):
         """
@@ -88,6 +112,7 @@ class HarmonyController(polyinterface.Controller):
         or longPoll. No need to Super this method the parent version does nothing.
         The timer can be overriden in the server.json.
         """
+        #self.l_debug('shortPoll','...')
         pass
 
     def longPoll(self):
@@ -97,6 +122,7 @@ class HarmonyController(polyinterface.Controller):
         or shortPoll. No need to Super this method the parent version does nothing.
         The timer can be overriden in the server.json.
         """
+        #self.l_debug('longpoll','...')
         pass
 
     def query(self):
@@ -106,8 +132,11 @@ class HarmonyController(polyinterface.Controller):
         nodes back to ISY. If you override this method you will need to Super or
         issue a reportDrivers() to each node manually.
         """
+        self.l_debug('query','...')
         for node in self.nodes:
-            self.nodes[node].reportDrivers()
+            self.l_debug('query',"node={}".format(node))
+            if self.nodes[node].address != self.address and self.nodes[node].do_poll:
+                self.nodes[node].reportDrivers()
 
     def discover(self, *args, **kwargs):
         """
@@ -157,7 +186,7 @@ class HarmonyController(polyinterface.Controller):
                     self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
                     addit = False
                 if addIt:
-                    hub_list.append({'address': address, 'name': cfgd['name'], 'host': cfgd['host']})
+                    hub_list.append({'address': address, 'name': cfgd['name'], 'host': cfgd['host'], 'port': 5222})
                     self._set_num_hubs(self.num_hubs + 1)
                     
         #
@@ -168,40 +197,60 @@ class HarmonyController(polyinterface.Controller):
                 {
                     'address': uuid_to_address(config['uuid']),
                     'name':    config['friendlyName'],
-                    'host': config['ip']
+                    'host':    config['ip'],
+                    'port':    config['port']
                 }
             )
         #
         # Now really add them.
         #
         for cnode in hub_list:
-            self.addNode(HarmonyHub(self, cnode['address'], cnode['name'], cnode['host']))
-            self._set_num_hubs(self.num_hubs + 1)
+            self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'])
         #
         # Build the profile
         #
         self.setDriver('GV7', 4)
         # This writes all the profile data files and returns our config info.
         # TODO: Need to zip up all files...
-        config_data = write_profile(LOGGER,hub_list)
+        #config_data = write_profile(LOGGER,hub_list)
         #
         # Upload the profile
         #
         self.setDriver('GV7', 5)
-        try:
-            self.poly.installprofile()
-        except:
-            # I know... don't catch all, but I don't know what possiblities there are?
-            err = sys.exc_info()[0]
-            self.setDriver('GV7', 7)
-            self.l_error('discovery','Install Profile Error: {}'.format(err))
-            return
+        #try:
+        #    self.poly.installprofile()
+        #except:
+        #    # I know... don't catch all, but I don't know what possiblities there are?
+        #    err = sys.exc_info()[0]
+        #    self.setDriver('GV7', 7)
+        #    self.l_error('discovery','Install Profile Error: {}'.format(err))
+        #    return
         # Now a reboot is required
         # TODO: This doesn't really mean it was complete, a response is needed from polyglot,
         # TODO: which is on the enhancement list.
         self.setDriver('GV7', 6)
-        
 
+    def add_hub(self,address,name,host,port,save=True):
+        self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} save={4}".format(address,name,host,port,save))
+        self.addNode(HarmonyHub(self, address, name, host, port),True)
+        self._set_num_hubs(self.num_hubs + 1)
+        if save:
+            cdata = self.polyConfig['customData']
+            if not 'hubs' in cdata:
+                cdata['hubs'] = {}
+            cdata['hubs'][address] = {'name': name, 'host': host, 'port': port}
+            self.saveCustomData(cdata)
+
+    def add_hub_from_customData(self,address):
+        self.l_debug("add_hub_from_customData","Hub address {0}".format(address))
+        cdata = self.polyConfig['customData']
+        self.l_debug("add_hub_from_customData","customData={0}".format(cdata))
+        if 'hubs' in cdata:
+            if address in cdata['hubs']:
+                ndata = cdata['hubs'][address]
+                return self.add_hub(address,ndata['name'],ndata['host'],ndata['port'])
+        self.l_error("add_hub_from_customData","Hub address {0} not saved in customData={1}".format(address,cdata))
+        
     def delete(self):
         """
         Example
@@ -216,18 +265,28 @@ class HarmonyController(polyinterface.Controller):
         self.l_info("_set_num_hubs","{}".format(self.num_hubs))
         self.setDriver('GV3', self.num_hubs)
         return True
+
+    def get_node_driver(self,node,driver):
+        self.l_debug("get_node_driver","driver={0} node={1}".format(driver,node))
+        if node['drivers']:
+            for nd in node['drivers']:
+                if nd['driver'] == driver:
+                    self.l_debug("get_node_driver","driver={0} found={1}".format(driver,nd))
+                    return nd
+        self.l_debug("get_node_driver","driver={1} Not Found".format(driver))
+        return False
     
     def l_info(self, name, string):
-        LOGGER.info("Main:%s: %s" %  (name,string))
+        LOGGER.info("%s:%s: %s" %  (self.id,name,string))
         
     def l_error(self, name, string):
-        LOGGER.error("Main:%s: %s" % (name,string))
+        LOGGER.error("%s:%s: %s" % (self.id,name,string))
         
     def l_warning(self, name, string):
-        LOGGER.warning("Main:%s: %s" % (name,string))
+        LOGGER.warning("%s:%s: %s" % (self.id,name,string))
         
     def l_debug(self, name, string):
-        LOGGER.debug("Main:%s: %s" % (name,string))
+        LOGGER.debug("%s:%s: %s" % (self.id,name,string))
 
     """
     Optional.

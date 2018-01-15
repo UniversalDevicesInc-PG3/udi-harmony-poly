@@ -1,6 +1,9 @@
 
-import polyinterface
-from harmony_hub_nodes import HarmonyDevice #HarmonyActivity
+import polyinterface,sys
+from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
+from harmony_hub_funcs import harmony_hub_client,ip2long,long2ip
+
+LOGGER = polyinterface.LOGGER
 
 class HarmonyHub(polyinterface.Node):
     """
@@ -21,24 +24,27 @@ class HarmonyHub(polyinterface.Node):
     reportDrivers(): Forces a full update of all drivers to Polyglot/ISY.
     query(): Called when ISY sends a query request to Polyglot for this specific node
     """
-    def __init__(self, controller, address, name, host):
+    def __init__(self, parent, address, name, host, port):
         """
         Optional.
         Super runs all the parent class necessities. You do NOT have
         to override the __init__ method, but if you do, you MUST call super.
 
         :param parent: Reference to the Controller class
-        :param primary: Controller address
         :param address: This nodes address
         :param name: This nodes name
         """
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
         # The id using the original case of the string
         self.id = address
+        self.l_info("init","hub '%s' '%s' %s" % (address, name, host))
         # But here we pass the lowercase, cause ISY doesn't allow the upper case!
-        super(HarmonyHub, self).__init__(controller, address.lower(), address.lower(), name)
+        # A Hub is it's own primary
+        super(HarmonyHub, self).__init__(parent, address.lower(), address.lower(), name)
         self.name   = name
         self.host   = host
+        self.port   = port
+        self.client = None
 
     def start(self):
         """
@@ -46,24 +52,30 @@ class HarmonyHub(polyinterface.Node):
         This method is run once the Node is successfully added to the ISY
         and we get a return result from Polyglot.
         """
-        self.setDriver('ST', 1)
-        self.add_devices()
-
-    def setOn(self, command):
-        """
-        Example command received from ISY.
-        Set DON on MyNode.
-        Sets the ST (status) driver to 1 or 'True'
-        """
-        self.setDriver('ST', 1)
-
-    def setOff(self, command):
-        """
-        Example command received from ISY.
-        Set DOF on MyNode
-        Sets the ST (status) driver to 0 or 'False'
-        """
-        self.setDriver('ST', 0)
+        self.l_info("start","hub '%s' '%s' %s" % (self.address, self.name, self.host))
+        self._set_st(0)
+        #
+        # Add host (IP) and port
+        #
+        self.setDriver('GV1', ip2long(self.host))
+        self.setDriver('GV2', self.port)
+        #
+        # Connect to the hub
+        #
+        self._get_client()
+        #
+        # Setup activities and devices
+        #
+        self.init_activities_and_devices()
+        #
+        # Call query to initialize and pull the info from the hub.
+        #
+        self.query();
+        #
+        # Only Hub devices are polled.
+        #
+        self.do_poll     = True
+        self.l_info("start","done hub '%s' '%s' %s" % (self.address, self.name, self.host))
 
     def query(self):
         """
@@ -71,30 +83,219 @@ class HarmonyHub(polyinterface.Node):
         the parent class, so you don't need to override this method unless
         there is a need.
         """
+        self.l_debug('query','...')
         self.reportDrivers()
 
-    def add_devices(self):
-        #self.controller.addNode(HarmonyDevice(self.controller, self, 'd46754012', 'AV Receiver'))
-        pass
-        
+    def _get_client(self):
+        self.l_info("get_client","Initializing PyHarmony Client")
+        try:
+            self.client = harmony_hub_client(self.host, self.port)
+        except:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
+            self.l_error("get_client",err_str)
+            self._set_st(0)
+            return False
+        self._set_st(1)
+        self.l_info("get_client","PyHarmony client= " + str(self.client))
+        return True
+    
+    def _set_st(self, value):
+        self.st = value
+        return self.setDriver('ST', value)
+    
+    def init_activities_and_devices(self):
+        self.l_info("init_activities_and_devices","start")
+        self.activity_nodes = dict()
+        self.device_nodes = dict()
+        harmony_config = self.client.get_config()
+        #
+        # Add all activities except -1 (PowerOff)
+        #
+        for a in harmony_config['activity']:
+            if a['id'] != '-1':
+                self.l_info("init","Activity: %s  Id: %s" % (a['label'], a['id']))
+                self.add_activity(a['id'],a['label'])
+        #
+        # Add all devices
+        #
+        for d in harmony_config['device']:
+            self.l_info("init","Device id='%s' name='%s', Type=%s, Manufacturer=%s, Model=%s" % (d['id'],d['label'],d['type'],d['manufacturer'],d['model']))
+            self.add_device(d['id'],d['label'])
+        self.l_info("init_activities_and_devices","end")
+            
+    #self.controller.addNode(HarmonyDevice(self.controller, self, 'd46754012', 'AV Receiver'))
 
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2}]
-    """
-    Optional.
-    This is an array of dictionary items containing the variable names(drivers)
-    values and uoms(units of measure) from ISY. This is how ISY knows what kind
-    of variable to display. Check the UOM's in the WSDK for a complete list.
-    UOM 2 is boolean so the ISY will display 'True/False'
-    """
-    id = 'HubDefault'
-    """
-    id of the node from the nodedefs.xml that is in the profile.zip. This tells
-    the ISY what fields and commands this node has.
-    """
+    def add_device(self,address,name):
+        # TODO: Pass in name and address as optional args.
+        self.parent.addNode(HarmonyDevice(self, address, name),True)
+        # TODO: Need a get_node?
+        #self.device_nodes[node.address] = node
+        #return node;
+
+    def add_activity(self,address,name):
+        self.parent.addNode(HarmonyActivity(self, address, name),True)
+        #self.activity_nodes[number] = node
+        #return node;
+
+    def start_activity(self, id=False, index=False):
+        """ 
+        Start the activity
+        """
+        if index is False and id is False:
+            self.l_error("start_activity","Must pass id or index")
+            return False
+        if index is False:
+            index = self._get_activity_index(id)
+        elif id is False:
+            id = self._get_activity_id(index)
+        self.l_debug("start_activity"," id=%s index=%s" % (str(id),str(index)))
+        if self.client is None:
+            self.l_error("start_activity","No Client" )
+            ret = False
+        else:
+            if id != -1:
+                ret = self.client.start_activity(id)
+                self.l_debug("start_activity","id=%s result=%s" % (str(id),str(ret)))
+            else:
+                ret = self.client.power_off()
+                self.l_debug("start_activity","power_off result=%s" % (str(ret)))
+            if ret:
+                # it worked, push it back to polyglot
+                self._set_current_activity(id)
+        return ret
+
+    def end_activity(self, id=False, index=False):
+        """ 
+        End the activity
+        """
+        if self.client is None:
+            self.l_error("end_activity","No Client" )
+            ret = False
+        else:
+            # Only way to end, is power_off (activity = -1)
+            ret = self.client.power_off()
+            # TODO: Currently released version of pyharmony always returns None
+            # TODO: remove this if a new version is released.
+            ret = True
+            self.l_debug("end_activity","ret=%s" % (str(ret)))
+            if ret:
+                self._set_current_activity(-1)
+        return ret
+            
+    def _set_all_activities(self,val,ignore_id=False):
+        # All other activities are no longer current
+        for nid in self.activity_nodes:
+            if ignore_id is False:
+                self.activity_nodes[nid]._set_st(val)
+            else:
+                if int(nid) != int(ignore_id):
+                    self.activity_nodes[nid]._set_st(val)
+        
+    def _get_activity_id(self,index):
+        """
+        Convert from activity index from nls, to real activity number
+        """
+        self.l_debug("_get_activity_id"," %d" % (index))
+        return self.parent.poly.nodeserver_config['info']['activities'][index]['id']
+    
+    def _get_activity_index(self,id):
+        """
+        Convert from activity index from nls, to real activity number
+        """
+        self.l_debug("_get_activity_index", str(id))
+        cnt = 0
+        for a in self.parent.poly.nodeserver_config['info']['activities']:
+            if int(a['id']) == int(id):
+                return cnt
+            cnt += 1
+        self.l_error("_get_activity_index","No activity id %s found." % (str(id)))
+        # Print them out for debug
+        for a in self.parent.poly.nodeserver_config['info']['activities']:
+            self.l_error("_get_activity_index","  From: label=%s, id=%s" % (a['label'],a['id']))
+        return False
+    
+    def change_channel(self,channel):
+        self.l_debug("change_channel","channel=%s" % (channel))
+        # Push it to the Hub
+        if self.client is None:
+            self.l_error("change_channel","No Client for channel '%s'." % (channel))
+            ret = False
+        else:
+            ret = self.client.change_channel(channel)
+            self.l_debug("change_channel","%s result=%s" % (channel,str(ret)))
+            # TODO: This always returns False :(
+            ret = True
+        return ret
+
+    def _set_current_activity(self, id, force=False):
+        """ 
+        Update Polyglot with the current activity.
+        """
+        val   = myint(id)
+        if self.current_activity == val:
+            return True
+        # The harmony activity number
+        self.current_activity = val
+        index = self._get_activity_index(val)
+        self.l_info("_set_current_activity","activity=%d, index=%d" % (self.current_activity,index))
+        self.setDriver('GV3', index)
+        # Make the activity node current, unless it's -1 which is poweroff
+        ignore_id=False
+        if id != -1:
+            self.activity_nodes[str(id)]._set_st(1)
+            ignore_id=id
+        # Update all the other activities to not be the current.
+        self._set_all_activities(0,ignore_id=ignore_id)
+        return True
+
+    def _cmd_set_current_activity(self, **kwargs):
+        """ 
+        This runs when ISY changes the current current activity
+        """
+        index = myint(kwargs.get("value"))
+        return self.start_activity(index=index)
+        
+    def _cmd_change_channel(self, **kwargs):
+        """ 
+        This runs when ISY calls set button which passes the button index
+        """
+        channel = myint(kwargs.get("value"))
+        self.l_debug("_cmd_change_channel","channel=%d" % (channel))
+        return self.change_channel(channel)
+
+    def _cmd_off(self, **kwargs):
+        """
+        This runs when ISY calls Off or Fast Off and sets the activity to poweroff
+        """
+        self.l_debug("_cmd_off","activity=%d" % (self.current_activity))
+        return self.end_activity()
+
+    def l_info(self, name, string):
+        LOGGER.info("Hub:%s:%s: %s" %  (self.id,name,string))
+        
+    def l_error(self, name, string):
+        LOGGER.error("Hub:%s:%s: %s" % (self.id,name,string))
+        
+    def l_warning(self, name, string):
+        LOGGER.warning("Hub:%s:%s: %s" % (self.id,name,string))
+        
+    def l_debug(self, name, string):
+        LOGGER.debug("Hub:%s:%s: %s" % (self.id,name,string))
+
+
+    drivers = [
+        {'driver': 'ST',  'value': 0, 'uom': 2},  #    bool: Connection status to Hub
+        {'driver': 'GV1', 'value': 0, 'uom': 56}, # integer: IP Address
+        {'driver': 'GV2', 'value': 0, 'uom': 56}, # integer: Port
+        {'driver': 'GV3', 'value': 0, 'uom': 25}, # integer: Current Activity
+        {'driver': 'GV4', 'value': 0, 'uom': 56}, # 
+        {'driver': 'GV5', 'value': 0, 'uom': 56}, # 
+    ]
     commands = {
-                    'DON': setOn, 'DOF': setOff
-                }
-    """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
-    """
+        'QUERY': query,
+        'SET_ACTIVITY': _cmd_set_current_activity,
+        'CHANGE_CHANNEL': _cmd_change_channel,
+        'DOF': _cmd_off,
+        'DFOF': _cmd_off,
+    }

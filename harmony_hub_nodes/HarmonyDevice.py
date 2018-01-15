@@ -20,22 +20,26 @@ class HarmonyDevice(polyinterface.Node):
     reportDrivers(): Forces a full update of all drivers to Polyglot/ISY.
     query(): Called when ISY sends a query request to Polyglot for this specific node
     """
-    def __init__(self, controller, primary, address, name):
+    def __init__(self, parent, address, name):
         """
         Optional.
         Super runs all the parent class necessities. You do NOT have
         to override the __init__ method, but if you do, you MUST call super.
 
-        :param parent: Reference to the Controller class
-        :param primary: Controller address
+        :param controller: Reference to the controller object
+        :param parent: Reference to the parent HarmonyHub object
         :param address: This nodes address
         :param name: This nodes name
         """
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
+        address = "d" + address
         self.id = address
-        #self.parent = parent
-        self.name   = name
-        super(HarmonyDevice, self).__init__(controller, primary.address, address, name)
+        super(HarmonyDevice, self).__init__(parent.controller, parent.address, address, name)
+        #self.name    = name
+        #self.address = address
+        #self.parent  = parent
+        # Only Hub devices are polled.
+        self.do_poll     = False
 
     def start(self):
         """
@@ -69,24 +73,82 @@ class HarmonyDevice(polyinterface.Node):
         """
         self.reportDrivers()
 
+    def l_info(self, name, string):
+        LOGGER.info("Device:%s:%s: %s" %  (self.id,name,string))
+        
+    def l_error(self, name, string):
+        LOGGER.error("Device:%s:%s: %s" % (self.id,name,string))
+        
+    def l_warning(self, name, string):
+        LOGGER.warning("Device:%s:%s: %s" % (self.id,name,string))
+        
+    def l_debug(self, name, string):
+        LOGGER.debug("Device:%s:%s: %s" % (self.id,name,string))
+
+    def _get_button_label(self,index):
+        """
+        Convert from button/function index from nls to real label
+        because pyharmony needs the label.
+        """
+        self.l_debug("_get_button_label","index=%d" % (index))
+        # TODO: Make sure it's a valid index?
+        return self.parent.poly.nodeserver_config['info']['functions'][index]['label']
+
+    def _get_button_command(self,index):
+        """
+        Convert from button/function index from nls to real label
+        because pyharmony needs the label.
+        """
+        self.l_debug("_get_button_command","index=%d" % (index))
+        # TODO: Make sure it's a valid index?
+        return self.parent.poly.nodeserver_config['info']['functions'][index]['command'][self.id]
+
+    def _send_command_by_index(self,index):
+        name = self._get_button_command(index)
+        self.l_debug("_send_command_by_index","index=%d, name=%s" % (index,name))
+        return self._send_command(name)
+
+    def _send_command(self,name):
+        self.l_debug("_send_command","name=%s" % (name))
+        # Push it to the Hub
+        if self.primary.client is None:
+            self.l_error("_send_command","No Client for command '%s'." % (name))
+            ret = False
+        else:
+            ret = self.primary.client.send_command(self.id,name)
+            self.l_debug("_send_command","%s,%s result=%s" % (str(self.id),name,str(ret)))
+            # TODO: This always returns None :(
+            ret = True
+        return ret
+
+    def _cmd_set_button(self, **kwargs):
+        """ 
+        This runs when ISY calls set button which passes the button index
+        """
+        index = myint(kwargs.get("value"))
+        self.l_debug("_cmd_set_button","index=%d" % (index))
+        return self._send_command_by_index(index)
+    
+    def _cmd_don(self, **kwargs):
+        """ 
+        This runs when ISY calls set button which passes the button index
+        """
+        self.l_debug("_cmd_don","")
+        # TODO: If no PowerOn command, do PowerToggle
+        return self._send_command('PowerOn')
+    
+    def _cmd_dof(self, **kwargs):
+        """ 
+        This runs when ISY calls set button which passes the button index
+        """
+        self.l_debug("_cmd_dof","")
+        # TODO: If no PowerOn command, do PowerToggle
+        return self._send_command('PowerOff')
 
     drivers = [{'driver': 'ST', 'value': 0, 'uom': 2}]
-    """
-    Optional.
-    This is an array of dictionary items containing the variable names(drivers)
-    values and uoms(units of measure) from ISY. This is how ISY knows what kind
-    of variable to display. Check the UOM's in the WSDK for a complete list.
-    UOM 2 is boolean so the ISY will display 'True/False'
-    """
     id = 'HarmonyDevice'
-    """
-    id of the node from the nodedefs.xml that is in the profile.zip. This tells
-    the ISY what fields and commands this node has.
-    """
     commands = {
-                    'DON': setOn, 'DOF': setOff
-                }
-    """
-    This is a dictionary of commands. If ISY sends a command to the NodeServer,
-    this tells it which method to call. DON calls setOn, etc.
-    """
+        'SET_BUTTON': _cmd_set_button,
+        'DON': _cmd_don,
+        'DOF': _cmd_dof,
+    }
