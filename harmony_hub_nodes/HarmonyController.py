@@ -315,20 +315,20 @@ class HarmonyController(polyinterface.Controller):
 
     def _cmd_set_debug_mode(self,command):
         val = int(command.get('value'))
+        self.l_info("_cmd_set_debug_mode",val)
         self.setDriver('GV4', val)
-        self.l_info("_cmd_set_debug_mode",self.getDriver('GV4'))
         
     def _cmd_set_shortpoll(self,command):
         val = int(command.get('value'))
+        self.l_info("_cmd_set_short_poll",val)
         self.setDriver('GV5', val)
         self.polyConfig['shortPoll'] = val
-        self.l_info("_cmd_set_short_poll",self.getDriver('GV5'))
 
     def _cmd_set_longpoll(self,command):
         val = int(command.get('value'))
+        self.l_info("_cmd_set_log_poll",val)
         self.setDriver('GV6', val)
         self.polyConfig['longPoll'] = val
-        self.l_info("_cmd_set_short_poll",self.getDriver('GV6'))
 
     id = 'HarmonyController'
     """ 
