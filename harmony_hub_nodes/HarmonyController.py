@@ -178,7 +178,6 @@ class HarmonyController(polyinterface.Controller):
                     addit = False
                 if addIt:
                     hub_list.append({'address': address, 'name': cfgd['name'], 'host': cfgd['host'], 'port': 5222})
-                    self._set_num_hubs(self.num_hubs + 1)
                     
         #
         # Next the discovered ones
