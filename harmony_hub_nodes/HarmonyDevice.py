@@ -1,6 +1,8 @@
 
 import polyinterface
 
+LOGGER = polyinterface.LOGGER
+
 class HarmonyDevice(polyinterface.Node):
     """
     This is the class that all the Nodes will be represented by. You will add this to
@@ -37,7 +39,7 @@ class HarmonyDevice(polyinterface.Node):
         super(HarmonyDevice, self).__init__(parent.controller, parent.address, address, name)
         #self.name    = name
         #self.address = address
-        #self.parent  = parent
+        self.hub  = parent
         # Only Hub devices are polled.
         self.do_poll     = False
 
@@ -74,16 +76,16 @@ class HarmonyDevice(polyinterface.Node):
         self.reportDrivers()
 
     def l_info(self, name, string):
-        LOGGER.info("Device:%s:%s: %s" %  (self.id,name,string))
+        LOGGER.info("Device:%s:%s:%s: %s" %  (self.id,self.name,name,string))
         
     def l_error(self, name, string):
-        LOGGER.error("Device:%s:%s: %s" % (self.id,name,string))
+        LOGGER.error("Device:%s:%s:%s: %s" % (self.id,self.name,name,string))
         
     def l_warning(self, name, string):
-        LOGGER.warning("Device:%s:%s: %s" % (self.id,name,string))
+        LOGGER.warning("Device:%s:%s:%s: %s" % (self.id,self.name,name,string))
         
     def l_debug(self, name, string):
-        LOGGER.debug("Device:%s:%s: %s" % (self.id,name,string))
+        LOGGER.debug("Device:%s:%s:%s: %s" % (self.id,self.name,name,string))
 
     def _get_button_label(self,index):
         """
@@ -92,7 +94,7 @@ class HarmonyDevice(polyinterface.Node):
         """
         self.l_debug("_get_button_label","index=%d" % (index))
         # TODO: Make sure it's a valid index?
-        return self.parent.poly.nodeserver_config['info']['functions'][index]['label']
+        return self.parent.harmony_config['info']['functions'][index]['label']
 
     def _get_button_command(self,index):
         """
@@ -100,8 +102,11 @@ class HarmonyDevice(polyinterface.Node):
         because pyharmony needs the label.
         """
         self.l_debug("_get_button_command","index=%d" % (index))
-        # TODO: Make sure it's a valid index?
-        return self.parent.poly.nodeserver_config['info']['functions'][index]['command'][self.id]
+        if index <= len(self.parent.harmony_config['info']['functions']):
+            return self.parent.harmony_config['info']['functions'][index]['command'][self.id]
+        else:
+            self.l_error("_get_button_command","index={0} is not in functions len={1}: {2}".format(index,len(self.parent.harmony_config['info']['functions']),self.parent.harmony_config['info']['functions']))
+            return False
 
     def _send_command_by_index(self,index):
         name = self._get_button_command(index)
@@ -111,25 +116,25 @@ class HarmonyDevice(polyinterface.Node):
     def _send_command(self,name):
         self.l_debug("_send_command","name=%s" % (name))
         # Push it to the Hub
-        if self.primary.client is None:
+        if self.hub.client is None:
             self.l_error("_send_command","No Client for command '%s'." % (name))
             ret = False
         else:
-            ret = self.primary.client.send_command(self.id,name)
+            ret = self.hub.client.send_command(self.id,name)
             self.l_debug("_send_command","%s,%s result=%s" % (str(self.id),name,str(ret)))
             # TODO: This always returns None :(
             ret = True
         return ret
 
-    def _cmd_set_button(self, **kwargs):
+    def _cmd_set_button(self, command):
         """ 
         This runs when ISY calls set button which passes the button index
         """
-        index = myint(kwargs.get("value"))
+        index = int(command.get('value'))
         self.l_debug("_cmd_set_button","index=%d" % (index))
         return self._send_command_by_index(index)
     
-    def _cmd_don(self, **kwargs):
+    def _cmd_don(self, command):
         """ 
         This runs when ISY calls set button which passes the button index
         """
@@ -137,7 +142,7 @@ class HarmonyDevice(polyinterface.Node):
         # TODO: If no PowerOn command, do PowerToggle
         return self._send_command('PowerOn')
     
-    def _cmd_dof(self, **kwargs):
+    def _cmd_dof(self, command):
         """ 
         This runs when ISY calls set button which passes the button index
         """

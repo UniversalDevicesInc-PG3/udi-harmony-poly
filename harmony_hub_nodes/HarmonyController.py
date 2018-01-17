@@ -14,7 +14,7 @@
 #
 
 import polyinterface
-import json,re,time,sys
+import json,re,time,sys,os.path,yaml
 from traceback import format_exception
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
@@ -22,6 +22,7 @@ from harmony_hub_funcs import uuid_to_address,long2ip
 from write_profile import write_profile
 
 LOGGER = polyinterface.LOGGER
+CONFIG = "config.yaml"
 
 # Read the SERVER info from the json.
 with open('server.json') as data:
@@ -65,7 +66,6 @@ class HarmonyController(polyinterface.Controller):
         """
         self.l_info('init','Initializing VERSION=%s' % (VERSION))
         super(HarmonyController, self).__init__(polyglot)
-        self.l_debug('init','Config=%s' % (self.polyConfig))
         self.name = 'HarmonyHub Controller'
         self.address = 'harmonyctrl'
         self.primary = self.address
@@ -79,7 +79,8 @@ class HarmonyController(polyinterface.Controller):
         this is where you should start. No need to Super this method, the parent
         version does nothing.
         """
-        self.l_info('start','Starting')
+        self.l_info('start','Starting Config=%s' % (self.polyConfig))
+
         self.setDriver('GV1', VERSION_MAJOR)
         self.setDriver('GV2', VERSION_MINOR)
         # Set Profile Status as Up To Date
@@ -96,6 +97,7 @@ class HarmonyController(polyinterface.Controller):
         self._set_num_hubs(0)
         #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
         if self.polyConfig['nodes']:
+            self.load_config()
             for item in self.polyConfig['nodes']:
                 if item['isprimary'] and item['node_def_id'] != self.id:
                     self.l_debug("start","adding hub for item={}".format(item))
@@ -104,6 +106,7 @@ class HarmonyController(polyinterface.Controller):
             # No nodes exist, that means this is the first time we have been run after install
             # So, do a discover
             self.discover()
+           
 
     def shortPoll(self):
         """
@@ -134,7 +137,6 @@ class HarmonyController(polyinterface.Controller):
         """
         self.l_debug('query','...')
         for node in self.nodes:
-            self.l_debug('query',"node={}".format(node))
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].reportDrivers()
 
@@ -212,19 +214,21 @@ class HarmonyController(polyinterface.Controller):
         self.setDriver('GV7', 4)
         # This writes all the profile data files and returns our config info.
         # TODO: Need to zip up all files...
-        #config_data = write_profile(LOGGER,hub_list)
+        config_data = write_profile(LOGGER,hub_list)
+        # Reload the config we just generated.
+        self.load_config()
         #
         # Upload the profile
         #
         self.setDriver('GV7', 5)
-        #try:
-        #    self.poly.installprofile()
-        #except:
-        #    # I know... don't catch all, but I don't know what possiblities there are?
-        #    err = sys.exc_info()[0]
-        #    self.setDriver('GV7', 7)
-        #    self.l_error('discovery','Install Profile Error: {}'.format(err))
-        #    return
+        try:
+            self.poly.installprofile()
+        except:
+            # I know... don't catch all, but I don't know what possiblities there are?
+            err = sys.exc_info()[0]
+            self.setDriver('GV7', 7)
+            self.l_error('discovery','Install Profile Error: {}'.format(err))
+            return
         # Now a reboot is required
         # TODO: This doesn't really mean it was complete, a response is needed from polyglot,
         # TODO: which is on the enhancement list.
@@ -232,7 +236,7 @@ class HarmonyController(polyinterface.Controller):
 
     def add_hub(self,address,name,host,port,save=True):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} save={4}".format(address,name,host,port,save))
-        self.addNode(HarmonyHub(self, address, name, host, port),True)
+        self.addNode(HarmonyHub(self, address, name, host, port))
         self._set_num_hubs(self.num_hubs + 1)
         if save:
             cdata = self.polyConfig['customData']
@@ -250,6 +254,20 @@ class HarmonyController(polyinterface.Controller):
                 ndata = cdata['hubs'][address]
                 return self.add_hub(address,ndata['name'],ndata['host'],ndata['port'])
         self.l_error("add_hub_from_customData","Hub address {0} not saved in customData={1}".format(address,cdata))
+
+    def load_config(self):
+        if os.path.exists(CONFIG):
+            self.l_info('load_config','Loading Harmony config {}'.format(CONFIG))
+            try:
+                config_h = open(CONFIG, 'r')
+                self.harmony_config = yaml.load(config_h)
+                config_h.close
+            except:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
+                self.l_error('load_config','failed to parse cfg={0} Error: {1}'.format(CONFIG,err_str))
+        else:
+            self.l_error('load_config','Harmony config does not exist {}'.format(CONFIG))
         
     def delete(self):
         """

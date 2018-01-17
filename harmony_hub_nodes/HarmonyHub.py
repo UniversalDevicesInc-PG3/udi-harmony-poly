@@ -37,14 +37,16 @@ class HarmonyHub(polyinterface.Node):
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
         # The id using the original case of the string
         self.id = address
-        self.l_info("init","hub '%s' '%s' %s" % (address, name, host))
-        # But here we pass the lowercase, cause ISY doesn't allow the upper case!
-        # A Hub is it's own primary
-        super(HarmonyHub, self).__init__(parent, address.lower(), address.lower(), name)
         self.name   = name
         self.host   = host
         self.port   = port
         self.client = None
+        self.current_activity = -2
+        self.do_poll = True
+        self.l_info("init","hub '%s' '%s' %s" % (address, name, host))
+        # But here we pass the lowercase, cause ISY doesn't allow the upper case!
+        # A Hub is it's own primary
+        super(HarmonyHub, self).__init__(parent, address.lower(), address.lower(), name)
 
     def start(self):
         """
@@ -71,10 +73,6 @@ class HarmonyHub(polyinterface.Node):
         # Call query to initialize and pull the info from the hub.
         #
         self.query();
-        #
-        # Only Hub devices are polled.
-        #
-        self.do_poll     = True
         self.l_info("start","done hub '%s' '%s' %s" % (self.address, self.name, self.host))
 
     def query(self):
@@ -84,6 +82,7 @@ class HarmonyHub(polyinterface.Node):
         there is a need.
         """
         self.l_debug('query','...')
+        self._get_current_activity()
         self.reportDrivers()
 
     def _get_client(self):
@@ -100,6 +99,19 @@ class HarmonyHub(polyinterface.Node):
         self.l_info("get_client","PyHarmony client= " + str(self.client))
         return True
     
+    def _get_current_activity(self):
+        try:
+            ca = self.client.get_current_activity()
+        except:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
+            self.l_error("get_current_activity",err_str)
+            self._set_st(0)
+            return False
+        self._set_st(1)
+        self.l_debug("poll","client.get_current_activity=%s" % str(ca))
+        self._set_current_activity(ca)
+        
     def _set_st(self, value):
         self.st = value
         return self.setDriver('ST', value)
@@ -108,6 +120,7 @@ class HarmonyHub(polyinterface.Node):
         self.l_info("init_activities_and_devices","start")
         self.activity_nodes = dict()
         self.device_nodes = dict()
+        # TODO: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
         harmony_config = self.client.get_config()
         #
         # Add all activities except -1 (PowerOff)
@@ -124,19 +137,16 @@ class HarmonyHub(polyinterface.Node):
             self.add_device(d['id'],d['label'])
         self.l_info("init_activities_and_devices","end")
             
-    #self.controller.addNode(HarmonyDevice(self.controller, self, 'd46754012', 'AV Receiver'))
-
-    def add_device(self,address,name):
+    def add_device(self,number,name):
         # TODO: Pass in name and address as optional args.
-        self.parent.addNode(HarmonyDevice(self, address, name),True)
-        # TODO: Need a get_node?
-        #self.device_nodes[node.address] = node
-        #return node;
+        node = self.parent.addNode(HarmonyDevice(self, number, name))
+        self.device_nodes[number] = node
+        return node;
 
-    def add_activity(self,address,name):
-        self.parent.addNode(HarmonyActivity(self, address, name),True)
-        #self.activity_nodes[number] = node
-        #return node;
+    def add_activity(self,number,name):
+        node = self.parent.addNode(HarmonyActivity(self, number, name))
+        self.activity_nodes[number] = node
+        return node;
 
     def start_activity(self, id=False, index=False):
         """ 
@@ -149,7 +159,7 @@ class HarmonyHub(polyinterface.Node):
             index = self._get_activity_index(id)
         elif id is False:
             id = self._get_activity_id(index)
-        self.l_debug("start_activity"," id=%s index=%s" % (str(id),str(index)))
+        self.l_debug("start_activity","id=%s index=%s" % (str(id),str(index)))
         if self.client is None:
             self.l_error("start_activity","No Client" )
             ret = False
@@ -197,7 +207,7 @@ class HarmonyHub(polyinterface.Node):
         Convert from activity index from nls, to real activity number
         """
         self.l_debug("_get_activity_id"," %d" % (index))
-        return self.parent.poly.nodeserver_config['info']['activities'][index]['id']
+        return self.parent.harmony_config['info']['activities'][index]['id']
     
     def _get_activity_index(self,id):
         """
@@ -205,13 +215,13 @@ class HarmonyHub(polyinterface.Node):
         """
         self.l_debug("_get_activity_index", str(id))
         cnt = 0
-        for a in self.parent.poly.nodeserver_config['info']['activities']:
+        for a in self.parent.harmony_config['info']['activities']:
             if int(a['id']) == int(id):
                 return cnt
             cnt += 1
         self.l_error("_get_activity_index","No activity id %s found." % (str(id)))
         # Print them out for debug
-        for a in self.parent.poly.nodeserver_config['info']['activities']:
+        for a in self.parent.harmony_config['info']['activities']:
             self.l_error("_get_activity_index","  From: label=%s, id=%s" % (a['label'],a['id']))
         return False
     
@@ -232,7 +242,7 @@ class HarmonyHub(polyinterface.Node):
         """ 
         Update Polyglot with the current activity.
         """
-        val   = myint(id)
+        val   = int(id)
         if self.current_activity == val:
             return True
         # The harmony activity number
@@ -249,22 +259,22 @@ class HarmonyHub(polyinterface.Node):
         self._set_all_activities(0,ignore_id=ignore_id)
         return True
 
-    def _cmd_set_current_activity(self, **kwargs):
+    def _cmd_set_current_activity(self, command):
         """ 
         This runs when ISY changes the current current activity
         """
-        index = myint(kwargs.get("value"))
+        index = int(command.get('value'))
         return self.start_activity(index=index)
         
-    def _cmd_change_channel(self, **kwargs):
+    def _cmd_change_channel(self, command):
         """ 
         This runs when ISY calls set button which passes the button index
         """
-        channel = myint(kwargs.get("value"))
+        channel = int(command.get('value'))
         self.l_debug("_cmd_change_channel","channel=%d" % (channel))
         return self.change_channel(channel)
 
-    def _cmd_off(self, **kwargs):
+    def _cmd_off(self, command):
         """
         This runs when ISY calls Off or Fast Off and sets the activity to poweroff
         """
@@ -272,16 +282,16 @@ class HarmonyHub(polyinterface.Node):
         return self.end_activity()
 
     def l_info(self, name, string):
-        LOGGER.info("Hub:%s:%s: %s" %  (self.id,name,string))
+        LOGGER.info("Hub:%s:%s:%s: %s" %  (self.id,self.name,name,string))
         
     def l_error(self, name, string):
-        LOGGER.error("Hub:%s:%s: %s" % (self.id,name,string))
+        LOGGER.error("Hub:%s:%s:%s: %s" % (self.id,self.name,name,string))
         
     def l_warning(self, name, string):
-        LOGGER.warning("Hub:%s:%s: %s" % (self.id,name,string))
+        LOGGER.warning("Hub:%s:%s:%s: %s" % (self.id,self.name,name,string))
         
     def l_debug(self, name, string):
-        LOGGER.debug("Hub:%s:%s: %s" % (self.id,name,string))
+        LOGGER.debug("Hub:%s:%s:%s: %s" % (self.id,self.name,name,string))
 
 
     drivers = [

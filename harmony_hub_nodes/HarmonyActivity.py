@@ -41,6 +41,7 @@ class HarmonyActivity(polyinterface.Node):
         #self.address = address
         # Only Hub devices are polled.
         self.do_poll     = False
+        # Add myself to the parents list of 
 
     def start(self):
         """
@@ -61,10 +62,10 @@ class HarmonyActivity(polyinterface.Node):
 
     def _set_st(self, st):
         self.st = st
-        self.set_driver('ST', int(st), uom=25, report=True)
-        self.l_debug("_set_st","set=%s, get=%s" % (st,self.get_driver('ST')[0]))
+        self.setDriver('ST',int(st))
+        self.l_debug("_set_st","set=%s, get=%s" % (st,self.getDriver('ST')))
         
-    def _cmd_on(self, **kwargs):
+    def _cmd_on(self, command):
         """ 
         This runs when ISY calls on button
         """
@@ -76,7 +77,7 @@ class HarmonyActivity(polyinterface.Node):
             self._set_st(1)
         return ret
 
-    def _cmd_off(self, **kwargs):
+    def _cmd_off(self, command):
         """ 
         This runs when ISY calls off/fast off button
         """
@@ -89,16 +90,16 @@ class HarmonyActivity(polyinterface.Node):
         return ret
 
     def l_info(self, name, string):
-        LOGGER.info("Activity:%s:%s: %s" %  (self.id,name,string))
+        LOGGER.info("Activity:%s:%s:%s: %s" %  (self.address,self.name,name,string))
         
     def l_error(self, name, string):
-        LOGGER.error("Activity:%s:%s: %s" % (self.id,name,string))
+        LOGGER.error("Activity:%s:%s:%s: %s" % (self.address,self.name,name,string))
         
     def l_warning(self, name, string):
-        LOGGER.warning("Activity:%s:%s: %s" % (self.id,name,string))
+        LOGGER.warning("Activity:%s:%s:%s: %s" % (self.address,self.name,name,string))
         
     def l_debug(self, name, string):
-        LOGGER.debug("Activity:%s:%s: %s" % (self.id,name,string))
+        LOGGER.debug("Activity:%s:%s:%s: %s" % (self.address,self.name,name,string))
 
     id = 'HarmonyActivity'
     drivers = [
