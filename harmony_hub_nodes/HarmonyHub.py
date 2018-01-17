@@ -80,7 +80,7 @@ class HarmonyHub(polyinterface.Node):
         # TODO: Poll the hub activity
         pass
         
-    def logPoll(self):
+    def longPoll(self):
         pass
         
     def query(self):
