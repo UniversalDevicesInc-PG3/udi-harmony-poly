@@ -78,7 +78,14 @@ class HarmonyHub(polyinterface.Node):
 
     def shortPoll(self):
         # TODO: Poll the hub activity
-        pass
+        #self.l_debug("shortPoll","start")
+        # If we had a connection issue previously, try to fix it.
+        if self.st == 0:
+            self.l_debug("poll","Calling get_client st=%d" % (self.st))
+            if not self._get_client():
+                return False
+        self._get_current_activity()
+        return True 
         
     def longPoll(self):
         pass
