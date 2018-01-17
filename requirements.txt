@@ -1,4 +1,3 @@
 polyinterface >= 2.0.14
 pyaml         >= 15.8.2
 pyharmony     == 1.0.18
-zipfile
