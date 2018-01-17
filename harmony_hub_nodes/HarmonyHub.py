@@ -78,10 +78,10 @@ class HarmonyHub(polyinterface.Node):
 
     def shortPoll(self):
         # TODO: Poll the hub activity
-        pass:
+        pass
         
     def logPoll(self):
-        pass:
+        pass
         
     def query(self):
         """
