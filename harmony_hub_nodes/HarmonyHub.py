@@ -76,6 +76,13 @@ class HarmonyHub(polyinterface.Node):
         self.query();
         self.l_info("start","done hub '%s' '%s' %s" % (self.address, self.name, self.host))
 
+    def shortPoll(self):
+        # TODO: Poll the hub activity
+        pass:
+        
+    def logPoll(self):
+        pass:
+        
     def query(self):
         """
         Called by ISY to report all drivers for this node. This is done in
