@@ -1,5 +1,5 @@
 
-#from pyharmony import ha_get_client
+from pyharmony import ha_get_client
 import os,socket,struct,hashlib
 
 def myint(value):
