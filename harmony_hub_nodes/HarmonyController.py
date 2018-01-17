@@ -322,6 +322,6 @@ class HarmonyController(polyinterface.Controller):
         {'driver': 'GV4', 'value': 0,  'uom': 25}, # integer: Log/Debug Mode
         {'driver': 'GV5', 'value': 5,  'uom': 25}, # integer: shortpoll
         {'driver': 'GV6', 'value': 60, 'uom': 25}, # integer: longpoll
-        {'driver': 'GV7', 'value': 0,  'uom': 25}  #    bool: Profile status
+        {'driver': 'GV7', 'value': 0,  'uom': 25}, #    bool: Profile status
         {'driver': 'GV8', 'value': 1,  'uom': 2}   #    bool: Auto Discover
     ]
