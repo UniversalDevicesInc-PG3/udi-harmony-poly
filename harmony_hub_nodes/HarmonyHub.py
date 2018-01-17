@@ -1,5 +1,6 @@
 
 import polyinterface,sys
+from traceback import format_exception
 from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
 from harmony_hub_funcs import harmony_hub_client,ip2long,long2ip
 
