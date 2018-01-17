@@ -18,6 +18,8 @@
       <st id="GV6" editor="INTEGER" />
       <!-- profile status -->
       <st id="GV7" editor="PROFILE_STATUS" />
+      <!-- auto discover status -->
+      <st id="GV8" editor="AUTODI" />
     </sts>
     <cmds>
       <sends>

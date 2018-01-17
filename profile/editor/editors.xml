@@ -1,6 +1,10 @@
 
 <editors>
 
+  <editor id="AUTODI">
+    <range uom="2" nls="AUTODI"/>
+  </editor>
+  
   <editor id="HUBST">
     <range uom="25" subset="0,1" nls="HUBST"/>
   </editor>

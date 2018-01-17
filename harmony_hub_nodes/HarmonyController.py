@@ -2,7 +2,6 @@
 # HarmonyController
 #
 # TODO:
-# - discover should check if hub IP address has changed?
 # - Set longpoll from our driver. (need getDriver)
 #
 # This is the main Harmony Hub Node Controller  
@@ -80,20 +79,23 @@ class HarmonyController(polyinterface.Controller):
         version does nothing.
         """
         self.l_info('start','Starting Config=%s' % (self.polyConfig))
-
         self.setDriver('GV1', VERSION_MAJOR)
         self.setDriver('GV2', VERSION_MINOR)
-        # Set Profile Status as Up To Date
-        # TODO: Need a way to know this...
-        # TODO: Get driver, only if it's reboot required, then set to 1?
-        self.setDriver('GV7', 1)
+        # Set Profile Status as Up To Date, if it's status 6=ISY Reboot Required
+        if (int(self.getDriver('GV7')) == 6):
+            self.setDriver('GV7', 1)
         #
         #
+        self.l_debug("start","shortPoll={}".format(self.polyConfig['shortPoll']))
         self.l_debug("start","longPoll={}".format(self.polyConfig['longPoll']))
+        if (int(self.getDriver('GV4')) != 0):
+            self.polyConfig['shortPoll'] = int(self.getDriver('GV4'))
+        if (int(self.getDriver('GV5')) != 0):
+            self.polyConfig['longPoll'] = int(self.getDriver('GV5'))
         #
         # Add Hubs from the config
         #
-        self.l_debug("start","Adding hubs...")
+        self.l_info("start","Adding known hubs...")
         self._set_num_hubs(0)
         #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
         if self.polyConfig['nodes']:
@@ -103,83 +105,70 @@ class HarmonyController(polyinterface.Controller):
                     self.l_debug("start","adding hub for item={}".format(item))
                     self.add_hub_from_customData(item['address'])
         else:
-            # No nodes exist, that means this is the first time we have been run after install
-            # So, do a discover
+            # No nodes exist, that means this is the first time we have been run
+            # after install, so do a discover
             self.discover()
            
 
     def shortPoll(self):
-        """
-        Optional.
-        This runs every 10 seconds. You would probably update your nodes either here
-        or longPoll. No need to Super this method the parent version does nothing.
-        The timer can be overriden in the server.json.
-        """
         #self.l_debug('shortPoll','...')
-        pass
+        for node in self.nodes:
+            if self.nodes[node].address != self.address and self.nodes[node].do_poll:
+                self.nodes[node].shortPoll()
 
     def longPoll(self):
-        """
-        Optional.
-        This runs every 30 seconds. You would probably update your nodes either here
-        or shortPoll. No need to Super this method the parent version does nothing.
-        The timer can be overriden in the server.json.
-        """
         #self.l_debug('longpoll','...')
-        pass
+        for node in self.nodes:
+            if self.nodes[node].address != self.address and self.nodes[node].do_poll:
+                self.nodes[node].longPoll()
 
     def query(self):
-        """
-        Optional.
-        By default a query to the control node reports the FULL driver set for ALL
-        nodes back to ISY. If you override this method you will need to Super or
-        issue a reportDrivers() to each node manually.
-        """
         self.l_debug('query','...')
         for node in self.nodes:
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].reportDrivers()
 
     def discover(self, *args, **kwargs):
-        """
-        Example
-        Do discovery here. Does not have to be called discovery. Called from example
-        controller start method and from DISCOVER command recieved from ISY as an exmaple.
-        """
         hub_list = list()
         self._set_num_hubs(0)
         #
         # Look for the hubs...
         #
-        self.setDriver('GV7', 2)
-        self.l_info('discover','harmony_discover: starting...')
-        from pyharmony import discovery as harmony_discovery
-        harmony_discovery.logger = LOGGER
-        try:
-            res = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
-        except (OSError) as err:
-            self.setDriver('GV7', 9)
-            self.l_error('discover','pyharmony discover failed. Please restart this nodeserver: {}'.format(err))
-            return
-        self.l_info('discover','harmony_discover: {0}'.format(res))
+        if (int(self.getDriver('GV8')) != 0):
+            self.setDriver('GV7', 2)
+            self.l_info('discover','harmony_discover: starting...')
+            from pyharmony import discovery as harmony_discovery
+            harmony_discovery.logger = LOGGER
+            try:
+                res = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
+            except (OSError) as err:
+                self.setDriver('GV7', 9)
+                self.l_error('discover','pyharmony discover failed. Please restart this nodeserver: {}'.format(err))
+                return
+            self.l_info('discover','harmony_discover: {0}'.format(res))
         #
         # Add the nodes
         #
         self.setDriver('GV7', 3)
         #
-        # First from customParams
+        # First from customParams.
         #
         for param in self.polyConfig['customParams']:
+            # Look for customParam starting with hub_
             match = re.match( "hub_(.*)", param, re.I)
             if match is not None:
+                # The hub address is everything following the hub_
                 address = match.group(1)
                 self.l_info('discover','got param {0} address={1}'.format(param,address))
+                # Get the customParam value which is json code
+                #  { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
                 cfg = self.polyConfig['customParams'][param]
                 try:
                     cfgd = json.loads(cfg)
                 except:
                     err = sys.exc_info()[0]
                     self.l_error('discover','failed to parse cfg={0} Error: {1}'.format(cfg,err))
+                # Check that name and hos are defined.
                 addit = True
                 if not 'name' in cfgd:
                     self.l_error('discover','No name in customParam {0} value={1}'.format(param,cfg))
@@ -327,12 +316,13 @@ class HarmonyController(polyinterface.Controller):
        Driver Details:
     """
     drivers = [
-        {'driver': 'ST',  'value': 0, 'uom': 2},  #    bool:   Connection status (managed by polyglot)
-        {'driver': 'GV1', 'value': 0, 'uom': 56}, #   float:   Version of this code (Major)
-        {'driver': 'GV2', 'value': 0, 'uom': 56}, #   float:   Version of this code (Minor)
-        {'driver': 'GV3', 'value': 0, 'uom': 25}, # integer: Number of the number of hubs we manage
-        {'driver': 'GV4', 'value': 0, 'uom': 25}, # integer: Log/Debug Mode
-        {'driver': 'GV5', 'value': 0, 'uom': 25}, # integer: shortpoll
-        {'driver': 'GV6', 'value': 0, 'uom': 25}, # integer: longpoll
-        {'driver': 'GV7', 'value': 0, 'uom': 25}  #    bool: Profile status
+        {'driver': 'ST',  'value': 0,  'uom': 2},  #    bool:   Connection status (managed by polyglot)
+        {'driver': 'GV1', 'value': 0,  'uom': 56}, #   float:   Version of this code (Major)
+        {'driver': 'GV2', 'value': 0,  'uom': 56}, #   float:   Version of this code (Minor)
+        {'driver': 'GV3', 'value': 0,  'uom': 25}, # integer: Number of the number of hubs we manage
+        {'driver': 'GV4', 'value': 0,  'uom': 25}, # integer: Log/Debug Mode
+        {'driver': 'GV5', 'value': 5,  'uom': 25}, # integer: shortpoll
+        {'driver': 'GV6', 'value': 60, 'uom': 25}, # integer: longpoll
+        {'driver': 'GV7', 'value': 0,  'uom': 25}  #    bool: Profile status
+        {'driver': 'GV8', 'value': 1,  'uom': 2}   #    bool: Auto Discover
     ]
