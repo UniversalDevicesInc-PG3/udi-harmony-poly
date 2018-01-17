@@ -89,10 +89,10 @@ class HarmonyController(polyinterface.Controller):
         #
         self.l_debug("start","shortPoll={}".format(self.polyConfig['shortPoll']))
         self.l_debug("start","longPoll={}".format(self.polyConfig['longPoll']))
-        if (int(self.getDriver('GV4')) != 0):
-            self.polyConfig['shortPoll'] = int(self.getDriver('GV4'))
         if (int(self.getDriver('GV5')) != 0):
-            self.polyConfig['longPoll'] = int(self.getDriver('GV5'))
+            self.polyConfig['shortPoll'] = int(self.getDriver('GV5'))
+        if (int(self.getDriver('GV6')) != 0):
+            self.polyConfig['longPoll'] = int(self.getDriver('GV6'))
         #
         # Add Hubs from the config
         #
@@ -310,7 +310,25 @@ class HarmonyController(polyinterface.Controller):
         return True
         
     def _cmd_install_profile(self,command):
-            self.poly.installprofile()
+        self.l_info("_cmd_install_profile","installing...")
+        self.poly.installprofile()
+
+    def _cmd_set_debug_mode(self,command):
+        val = int(command.get('value'))
+        self.setDriver('GV4', val)
+        self.l_info("_cmd_set_debug_mode",self.getDriver('GV4'))
+        
+    def _cmd_set_short_poll(self,command):
+        val = int(command.get('value'))
+        self.setDriver('GV5', val)
+        self.polyConfig['shortPoll'] = val
+        self.l_info("_cmd_set_short_poll",self.getDriver('GV5'))
+
+    def _cmd_set_long_poll(self,command):
+        val = int(command.get('value'))
+        self.setDriver('GV6', val)
+        self.polyConfig['longPoll'] = val
+        self.l_info("_cmd_set_short_poll",self.getDriver('GV6'))
 
     id = 'HarmonyController'
     """ 
