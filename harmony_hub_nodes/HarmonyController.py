@@ -14,6 +14,7 @@
 
 import polyinterface
 import json,re,time,sys,os.path,yaml
+import zipfile
 from traceback import format_exception
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
@@ -107,7 +108,7 @@ class HarmonyController(polyinterface.Controller):
         else:
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
-            self.discover()
+            self._cmd_discover()
            
 
     def shortPoll(self):
@@ -128,22 +129,26 @@ class HarmonyController(polyinterface.Controller):
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].reportDrivers()
 
-    def discover(self, *args, **kwargs):
+    def _cmd_discover(self, command):
         hub_list = list()
         self._set_num_hubs(0)
         #
         # Look for the hubs...
         #
-        if (int(self.getDriver('GV8')) != 0):
-            self.setDriver('GV7', 2)
+        self.setDriver('GV7', 2)
+        auto_discover = int(self.getDriver('GV8'))
+        if (auto_discover == 0):
+            self.l_info('discover','harmony_discover: skipping since auto discover={0}...'.format(auto_discover))
+            discovery_result = list()
+        else:
             self.l_info('discover','harmony_discover: starting...')
             from pyharmony import discovery as harmony_discovery
             harmony_discovery.logger = LOGGER
             try:
-                res = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
+                discovery_result = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
             except (OSError) as err:
                 self.setDriver('GV7', 9)
-                self.l_error('discover','pyharmony discover failed. Please restart this nodeserver: {}'.format(err))
+                self.l_error('discover','pyharmony discover failed. May need to restart this nodeserver: {}'.format(err))
                 return
             self.l_info('discover','harmony_discover: {0}'.format(res))
         #
@@ -182,7 +187,7 @@ class HarmonyController(polyinterface.Controller):
         #
         # Next the discovered ones
         #
-        for config in res:
+        for config in discover_result:
             hub_list.append(
                 {
                     'address': uuid_to_address(config['uuid']),
@@ -201,26 +206,31 @@ class HarmonyController(polyinterface.Controller):
         #
         self.setDriver('GV7', 4)
         # This writes all the profile data files and returns our config info.
-        # TODO: Need to zip up all files...
         config_data = write_profile(LOGGER,hub_list)
         # Reload the config we just generated.
         self.load_config()
         #
+        # Write the Zip file
+        #
+        # TODO: Need to zip up all files...
+        os.chdir("profile")
+        self.l_info("discover","Writing ../profile.zip from {0}".format(os.getcwd()))
+        zf = zipfile.ZipFile('../profile.zip', mode='w')
+        try:
+            zf.write('version.txt','editor/editors.xml','editor/custom.xml','nls/en_us.txt','nodedef/nodedefs.xml','nodedef/custom.xml');
+            zf.close()
+        except:
+            err = sys.exc_info()[0]
+            self.setDriver('GV7', 11)
+            self.l_error('discovery','Failed writing zip: {}'.format(err))
+            os.chdir("..")
+            return
+        os.chdir("..")
+        #
         # Upload the profile
         #
-        self.setDriver('GV7', 5)
-        try:
-            self.poly.installprofile()
-        except:
-            # I know... don't catch all, but I don't know what possiblities there are?
-            err = sys.exc_info()[0]
-            self.setDriver('GV7', 7)
-            self.l_error('discovery','Install Profile Error: {}'.format(err))
-            return
-        # Now a reboot is required
-        # TODO: This doesn't really mean it was complete, a response is needed from polyglot,
-        # TODO: which is on the enhancement list.
-        self.setDriver('GV7', 6)
+        st = self.install_profile()
+        return st
 
     def add_hub(self,address,name,host,port,save=True):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} save={4}".format(address,name,host,port,save))
@@ -272,16 +282,6 @@ class HarmonyController(polyinterface.Controller):
         self.setDriver('GV3', self.num_hubs)
         return True
 
-    def get_node_driver(self,node,driver):
-        self.l_debug("get_node_driver","driver={0} node={1}".format(driver,node))
-        if node['drivers']:
-            for nd in node['drivers']:
-                if nd['driver'] == driver:
-                    self.l_debug("get_node_driver","driver={0} found={1}".format(driver,nd))
-                    return nd
-        self.l_debug("get_node_driver","driver={1} Not Found".format(driver))
-        return False
-    
     def l_info(self, name, string):
         LOGGER.info("%s:%s: %s" %  (self.id,name,string))
         
@@ -294,22 +294,35 @@ class HarmonyController(polyinterface.Controller):
     def l_debug(self, name, string):
         LOGGER.debug("%s:%s: %s" % (self.id,name,string))
 
-    """
-    Optional.
-    Since the controller is the parent node in ISY, it will actual show up as a node.
-    So it needs to know the drivers and what id it will use. The drivers are
-    the defaults in the parent Class, so you don't need them unless you want to add to
-    them. The ST and GV1 variables are for reporting status through Polyglot to ISY,
-    DO NOT remove them. UOM 2 is boolean.
-    """
+    def install_profile(self):
+        self.setDriver('GV7', 5)
+        try:
+            self.poly.installprofile()
+        except:
+            err = sys.exc_info()[0]
+            self.setDriver('GV7', 7)
+            self.l_error('discovery','Install Profile Error: {}'.format(err))
+            return False
+        # Now a reboot is required
+        # TODO: This doesn't really mean it was complete, a response is needed from polyglot,
+        # TODO: which is on the enhancement list.
+        self.setDriver('GV7', 6)
+        return True
+        
+    def cmd_install_profile(self,command):
+            self.poly.installprofile()
+
     id = 'HarmonyController'
+    """ 
+       Commands:
+    """
     commands = {
         'QUERY': query,
-        'DISCOVER': discover,
-#        'REFRESH_CONFIG': _cmd_refresh_config,
-#        'SET_DEBUGMODE': _cmd_set_debug_mode,
-#        'SET_SHORTPOLL': _cmd_set_shortpoll,
-#        'SET_LONGPOLL':  _cmd_set_longpoll
+        'DISCOVER': _cmd_discover,
+        'INSTALL_PROFILE': _cmd_install_profile,
+        'SET_DEBUGMODE': _cmd_set_debug_mode,
+        'SET_SHORTPOLL': _cmd_set_shortpoll,
+        'SET_LONGPOLL':  _cmd_set_longpoll
     }
     """ 
        Driver Details:
