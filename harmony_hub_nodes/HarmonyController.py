@@ -309,7 +309,7 @@ class HarmonyController(polyinterface.Controller):
         self.setDriver('GV7', 6)
         return True
         
-    def cmd_install_profile(self,command):
+    def _cmd_install_profile(self,command):
             self.poly.installprofile()
 
     id = 'HarmonyController'
