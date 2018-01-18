@@ -43,7 +43,8 @@ class HarmonyHub(polyinterface.Node):
         self.port   = port
         self.client = None
         self.current_activity = -2
-        self.do_poll = True
+        # Can't poll until start runs.
+        self.do_poll = False
         self.l_info("init","hub '%s' '%s' %s" % (address, name, host))
         # But here we pass the lowercase, cause ISY doesn't allow the upper case!
         # A Hub is it's own primary
@@ -74,6 +75,7 @@ class HarmonyHub(polyinterface.Node):
         # Call query to initialize and pull the info from the hub.
         #
         self.query();
+        self.do_poll = True
         self.l_info("start","done hub '%s' '%s' %s" % (self.address, self.name, self.host))
 
     def shortPoll(self):

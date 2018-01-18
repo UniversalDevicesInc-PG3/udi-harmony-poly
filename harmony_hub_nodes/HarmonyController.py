@@ -81,16 +81,23 @@ class HarmonyController(polyinterface.Controller):
         self.setDriver('GV1', VERSION_MAJOR)
         self.setDriver('GV2', VERSION_MINOR)
         # Set Profile Status as Up To Date, if it's status 6=ISY Reboot Required
-        if (int(self.getDriver('GV7')) == 6):
+        val = self.getDriver('GV7')
+        if val is None or int(val) == 6:
             self.setDriver('GV7', 1)
         #
         #
         self.l_debug("start","shortPoll={}".format(self.polyConfig['shortPoll']))
         self.l_debug("start","longPoll={}".format(self.polyConfig['longPoll']))
-        if (int(self.getDriver('GV5')) != 0):
-            self.polyConfig['shortPoll'] = int(self.getDriver('GV5'))
-        if (int(self.getDriver('GV6')) != 0):
-            self.polyConfig['longPoll'] = int(self.getDriver('GV6'))
+        val = self.getDriver('GV5')
+        if val is None:
+            self.setDriver('GV5',self.polyConfig['shortPoll'])
+        elif (int(val) != 0):
+            self.polyConfig['shortPoll'] = int(val)
+        val = self.getDriver('GV6')
+        if val is None:
+            self.setDriver('GV6',self.polyConfig['longPoll'])
+        elif (int(val) != 0):
+            self.polyConfig['longPoll'] = int(val)
         #
         # Add Hubs from the config
         #
@@ -106,7 +113,7 @@ class HarmonyController(polyinterface.Controller):
         else:
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
-            self._cmd_discover()
+            self.discover()
            
 
     def shortPoll(self):
@@ -127,7 +134,7 @@ class HarmonyController(polyinterface.Controller):
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].reportDrivers()
 
-    def _cmd_discover(self, command):
+    def discover(self):
         hub_list = list()
         self._set_num_hubs(0)
         #
@@ -310,6 +317,9 @@ class HarmonyController(polyinterface.Controller):
         # TODO: which is on the enhancement list.
         self.setDriver('GV7', 6)
         return True
+        
+    def _cmd_discover(self, command):
+        self.discover()
         
     def _cmd_build_profile(self,command):
         self.l_info("_cmd_build_profile","building...")
