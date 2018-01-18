@@ -13,11 +13,10 @@
 
 import polyinterface
 import json,re,time,sys,os.path,yaml
-import zipfile
 from traceback import format_exception
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
-from harmony_hub_funcs import uuid_to_address,long2ip
+from harmony_hub_funcs import id_to_address,get_valid_node_name,long2ip
 from write_profile import write_profile
 
 LOGGER = polyinterface.LOGGER
@@ -135,21 +134,25 @@ class HarmonyController(polyinterface.Controller):
         # Look for the hubs...
         #
         self.setDriver('GV7', 2)
-        auto_discover = int(self.getDriver('GV8'))
+        auto_discover = self.getDriver('GV8')
+        if auto_discover is None:
+            auto_discover = 1
+        else:
+            auto_discover = int(auto_discover)
         if (auto_discover == 0):
             self.l_info('discover','harmony_discover: skipping since auto discover={0}...'.format(auto_discover))
-            discovery_result = list()
+            discover_result = list()
         else:
             self.l_info('discover','harmony_discover: starting...')
             from pyharmony import discovery as harmony_discovery
             harmony_discovery.logger = LOGGER
             try:
-                discovery_result = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
+                discover_result = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
             except (OSError) as err:
                 self.setDriver('GV7', 9)
                 self.l_error('discover','pyharmony discover failed. May need to restart this nodeserver: {}'.format(err))
                 return
-            self.l_info('discover','harmony_discover: {0}'.format(res))
+            self.l_info('discover','harmony_discover: {0}'.format(discover_result))
         #
         # Add the nodes
         #
@@ -181,7 +184,7 @@ class HarmonyController(polyinterface.Controller):
                     self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
                     addit = False
                 if addIt:
-                    hub_list.append({'address': address, 'name': cfgd['name'], 'host': cfgd['host'], 'port': 5222})
+                    hub_list.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
                     
         #
         # Next the discovered ones
@@ -189,8 +192,8 @@ class HarmonyController(polyinterface.Controller):
         for config in discover_result:
             hub_list.append(
                 {
-                    'address': uuid_to_address(config['uuid']),
-                    'name':    config['friendlyName'],
+                    'address': 'h'+id_to_address(config['uuid'],13),
+                    'name':    get_valid_node_name(config['friendlyName']),
                     'host':    config['ip'],
                     'port':    config['port']
                 }
@@ -287,23 +290,6 @@ class HarmonyController(polyinterface.Controller):
         config_data = write_profile(LOGGER,hub_list)
         # Reload the config we just generated.
         self.load_config()
-        #
-        # Write the Zip file
-        #
-        # TODO: Need to zip up all files...
-        os.chdir("profile")
-        self.l_info("discover","Writing ../profile.zip from {0}".format(os.getcwd()))
-        zf = zipfile.ZipFile('../profile.zip', mode='w')
-        try:
-            zf.write('version.txt','editor/editors.xml','editor/custom.xml','nls/en_us.txt','nodedef/nodedefs.xml','nodedef/custom.xml');
-            zf.close()
-        except:
-            err = sys.exc_info()[0]
-            self.setDriver('GV7', 11)
-            self.l_error('discovery','Failed writing zip: {}'.format(err))
-            os.chdir("..")
-            return
-        os.chdir("..")
         #
         # Upload the profile
         #

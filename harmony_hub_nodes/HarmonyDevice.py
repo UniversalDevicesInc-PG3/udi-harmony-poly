@@ -34,6 +34,7 @@ class HarmonyDevice(polyinterface.Node):
         :param name: This nodes name
         """
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
+        self.did = address
         address = "d" + address
         self.id = address
         super(HarmonyDevice, self).__init__(parent.controller, parent.address, address, name)
@@ -103,12 +104,18 @@ class HarmonyDevice(polyinterface.Node):
         """
         self.l_debug("_get_button_command","index=%d" % (index))
         if index <= len(self.parent.harmony_config['info']['functions']):
-            return self.parent.harmony_config['info']['functions'][index]['command'][self.id]
+            if not self.did in self.parent.harmony_config['info']['functions'][index]['command']:
+                self.l_error("_get_button_command","This device id={0} not in command hash = {1}".format(self.did,self.parent.harmony_config['info']['functions'][index]['command']))
+                return False
+            command = self.parent.harmony_config['info']['functions'][index]['command'][self.did]
+            self.l_debug("_get_button_command","command=%s" % (command))
+            return command
         else:
             self.l_error("_get_button_command","index={0} is not in functions len={1}: {2}".format(index,len(self.parent.harmony_config['info']['functions']),self.parent.harmony_config['info']['functions']))
             return False
 
     def _send_command_by_index(self,index):
+        self.l_debug("_send_command_by_index","index=%d" % (index))
         name = self._get_button_command(index)
         self.l_debug("_send_command_by_index","index=%d, name=%s" % (index,name))
         return self._send_command(name)
@@ -120,8 +127,8 @@ class HarmonyDevice(polyinterface.Node):
             self.l_error("_send_command","No Client for command '%s'." % (name))
             ret = False
         else:
-            ret = self.hub.client.send_command(self.id,name)
-            self.l_debug("_send_command","%s,%s result=%s" % (str(self.id),name,str(ret)))
+            ret = self.hub.client.send_command(self.did,name)
+            self.l_debug("_send_command","%s,%s result=%s" % (str(self.did),name,str(ret)))
             # TODO: This always returns None :(
             ret = True
         return ret

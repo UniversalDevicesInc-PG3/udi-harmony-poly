@@ -2,7 +2,7 @@
 import polyinterface,sys
 from traceback import format_exception
 from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
-from harmony_hub_funcs import harmony_hub_client,ip2long,long2ip
+from harmony_hub_funcs import harmony_hub_client,ip2long,long2ip,get_valid_node_name
 
 LOGGER = polyinterface.LOGGER
 
@@ -37,7 +37,7 @@ class HarmonyHub(polyinterface.Node):
         """
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
         # The id using the original case of the string
-        self.id = address
+        self.id     = address
         self.name   = name
         self.host   = host
         self.port   = port
@@ -129,8 +129,8 @@ class HarmonyHub(polyinterface.Node):
         self._set_current_activity(ca)
         
     def _set_st(self, value):
-        self.st = value
-        return self.setDriver('ST', value)
+        self.st = int(value)
+        return self.setDriver('ST', int(value))
     
     def init_activities_and_devices(self):
         self.l_info("init_activities_and_devices","start")
@@ -155,12 +155,12 @@ class HarmonyHub(polyinterface.Node):
             
     def add_device(self,number,name):
         # TODO: Pass in name and address as optional args.
-        node = self.parent.addNode(HarmonyDevice(self, number, name))
+        node = self.parent.addNode(HarmonyDevice(self, number, get_valid_node_name(name)))
         self.device_nodes[number] = node
         return node;
 
     def add_activity(self,number,name):
-        node = self.parent.addNode(HarmonyActivity(self, number, name))
+        node = self.parent.addNode(HarmonyActivity(self, number, get_valid_node_name(name)))
         self.activity_nodes[number] = node
         return node;
 

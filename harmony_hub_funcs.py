@@ -1,6 +1,6 @@
 
 from pyharmony import ha_get_client
-import os,socket,struct,hashlib
+import os,socket,struct,hashlib,re
 
 def myint(value):
     """ round and convert to int """
@@ -60,10 +60,11 @@ def harmony_hub_client(host, port=5222):
 def uuid_to_address(uuid):
     return uuid[-12:]
 
-def id_to_addr(address):
+def id_to_address(address,slen=14):
+    slen = slen * -1
     m = hashlib.md5()
     m.update(address.encode())
-    return m.hexdigest()[-14:]
+    return m.hexdigest()[slen:]
 
 # Removes invalid charaters for ISY Node description
 def get_valid_node_name(name):
