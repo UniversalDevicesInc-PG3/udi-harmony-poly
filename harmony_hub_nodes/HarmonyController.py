@@ -2,7 +2,6 @@
 # HarmonyController
 #
 # TODO:
-# - Set longpoll from our driver. (need getDriver)
 #
 # This is the main Harmony Hub Node Controller  
 # Add a Configuration Parameter:
@@ -204,33 +203,7 @@ class HarmonyController(polyinterface.Controller):
         #
         # Build the profile
         #
-        self.setDriver('GV7', 4)
-        # This writes all the profile data files and returns our config info.
-        config_data = write_profile(LOGGER,hub_list)
-        # Reload the config we just generated.
-        self.load_config()
-        #
-        # Write the Zip file
-        #
-        # TODO: Need to zip up all files...
-        os.chdir("profile")
-        self.l_info("discover","Writing ../profile.zip from {0}".format(os.getcwd()))
-        zf = zipfile.ZipFile('../profile.zip', mode='w')
-        try:
-            zf.write('version.txt','editor/editors.xml','editor/custom.xml','nls/en_us.txt','nodedef/nodedefs.xml','nodedef/custom.xml');
-            zf.close()
-        except:
-            err = sys.exc_info()[0]
-            self.setDriver('GV7', 11)
-            self.l_error('discovery','Failed writing zip: {}'.format(err))
-            os.chdir("..")
-            return
-        os.chdir("..")
-        #
-        # Upload the profile
-        #
-        st = self.install_profile()
-        return st
+        return self.build_profile_from_list(hub_list)
 
     def add_hub(self,address,name,host,port,save=True):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} save={4}".format(address,name,host,port,save))
@@ -294,6 +267,49 @@ class HarmonyController(polyinterface.Controller):
     def l_debug(self, name, string):
         LOGGER.debug("%s:%s: %s" % (self.id,name,string))
 
+    def build_profile_from_customData(self):
+        cdata = self.polyConfig['customData']
+        if not 'hubs' in cdata:
+            self.l_error("build_profile","No hubs in customData to build: {0}".format(cdata))
+            return False
+        # Turn customData hubs hash into a list...
+        # From: cdata['hubs'][address] = {'name': name, 'host': host, 'port': port}
+        hub_list = list()
+        for address in cdata['hubs']:
+            hub_c = deepcopy(cdata['hubs'][address])
+            hub_c['address'] = address
+            hub_list.append(hub_c)
+        return build_profile_from_list(hub_list)
+        
+    def build_profile_from_list(self,hub_list):
+        self.setDriver('GV7', 4)
+        # This writes all the profile data files and returns our config info.
+        config_data = write_profile(LOGGER,hub_list)
+        # Reload the config we just generated.
+        self.load_config()
+        #
+        # Write the Zip file
+        #
+        # TODO: Need to zip up all files...
+        os.chdir("profile")
+        self.l_info("discover","Writing ../profile.zip from {0}".format(os.getcwd()))
+        zf = zipfile.ZipFile('../profile.zip', mode='w')
+        try:
+            zf.write('version.txt','editor/editors.xml','editor/custom.xml','nls/en_us.txt','nodedef/nodedefs.xml','nodedef/custom.xml');
+            zf.close()
+        except:
+            err = sys.exc_info()[0]
+            self.setDriver('GV7', 11)
+            self.l_error('discovery','Failed writing zip: {}'.format(err))
+            os.chdir("..")
+            return
+        os.chdir("..")
+        #
+        # Upload the profile
+        #
+        st = self.install_profile()
+        return st
+        
     def install_profile(self):
         self.setDriver('GV7', 5)
         try:
@@ -308,6 +324,10 @@ class HarmonyController(polyinterface.Controller):
         # TODO: which is on the enhancement list.
         self.setDriver('GV7', 6)
         return True
+        
+    def _cmd_build_profile(self,command):
+        self.l_info("_cmd_build_profile","building...")
+        self.build_profile_from_customData()
         
     def _cmd_install_profile(self,command):
         self.l_info("_cmd_install_profile","installing...")
@@ -337,6 +357,7 @@ class HarmonyController(polyinterface.Controller):
     commands = {
         'QUERY': query,
         'DISCOVER': _cmd_discover,
+        'BUILD_PROFILE': _cmd_build_profile,
         'INSTALL_PROFILE': _cmd_install_profile,
         'SET_DEBUGMODE': _cmd_set_debug_mode,
         'SET_SHORTPOLL': _cmd_set_shortpoll,
