@@ -14,6 +14,7 @@
 import polyinterface
 import json,re,time,sys,os.path,yaml
 from traceback import format_exception
+from copy import deepcopy
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
 from harmony_hub_funcs import id_to_address,get_valid_node_name,long2ip
@@ -289,7 +290,7 @@ class HarmonyController(polyinterface.Controller):
             hub_c = deepcopy(cdata['hubs'][address])
             hub_c['address'] = address
             hub_list.append(hub_c)
-        return build_profile_from_list(hub_list)
+        return self.build_profile_from_list(hub_list)
         
     def build_profile_from_list(self,hub_list):
         self.setDriver('GV7', 4)

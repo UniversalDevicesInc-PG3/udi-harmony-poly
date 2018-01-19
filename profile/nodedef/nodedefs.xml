@@ -36,6 +36,9 @@
         <cmd id="SET_LONGPOLL">
           <p id="" editor="INTEGER" init="GV6" />
         </cmd>
+        <cmd id="SET_DISCOVER_MODE">
+          <p id="" editor="AUTODI" init="GV8" />
+        </cmd>
         <cmd id="QUERY" />
         <cmd id="DISCOVER" />
         <cmd id="INSTALL_PROFILE" />
