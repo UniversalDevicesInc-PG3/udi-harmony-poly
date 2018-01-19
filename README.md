@@ -35,5 +35,7 @@ Create a param with the name 'hub_myhubaddress' with a value: { "name": "Harmony
 
 # Release Notes
 
-- 2.0.0
+- 2.0.1 01/18/2018
+  - First announced release
+- 2.0.0 01/17/2018
   - Not offically released
