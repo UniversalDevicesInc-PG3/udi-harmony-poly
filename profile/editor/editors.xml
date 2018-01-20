@@ -31,7 +31,7 @@
   </editor>
 
   <editor id="AUTODI">
-    <range uom="2" nls="ADI"/>
+    <range uom="25" subset="0,1" nls="ADI"/>
   </editor>
   
 </editors>

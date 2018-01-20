@@ -126,8 +126,8 @@ class HarmonyHub(polyinterface.Node):
             self._set_st(0)
             return False
         self._set_st(1)
-        if self.current_activity != int(ca):
-            self.l_debug("poll","client.get_current_activity={}".format(ca))
+        if int(self.current_activity) != int(ca):
+            self.l_debug("get_current_activity"," poll={0} current={1}".format(ca,self.current_activity))
         self._set_current_activity(ca)
         
     def _set_st(self, value):

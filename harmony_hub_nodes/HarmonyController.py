@@ -16,7 +16,6 @@ import json,re,time,sys,os.path,yaml
 from traceback import format_exception
 from copy import deepcopy
 from harmony_hub_nodes import HarmonyHub
-from harmony_hub_version import VERSION_MAJOR,VERSION_MINOR
 from harmony_hub_funcs import id_to_address,get_valid_node_name,long2ip
 from write_profile import write_profile
 
@@ -79,22 +78,34 @@ class HarmonyController(polyinterface.Controller):
         version does nothing.
         """
         self.l_info('start','Starting Config=%s' % (self.polyConfig))
-        self.setDriver('GV1', VERSION_MAJOR)
-        self.setDriver('GV2', VERSION_MINOR)
+        # Split version into two floats.
+        sv = VERSION.split(".");
+        v1 = 0;
+        v2 = 0;
+        if len(sv) == 1:
+            v1 = int(vl[0])
+        elif len(sv) > 1:
+            v1 = float("%s.%s" % (sv[0],str(sv[1])))
+            if len(sv) == 3:
+                v2 = int(sv[2])
+            else:
+                v2 = float("%s.%s" % (sv[2],str(sv[3])))
+        self.setDriver('GV1', v1)
+        self.setDriver('GV2', v2)
         # Set Profile Status as Up To Date, if it's status 6=ISY Reboot Required
         val = self.getDriver('GV7')
-        if val is None or int(val) == 6:
+        if val is None or int(val) == 6 or int(val) == 0:
             self.setDriver('GV7', 1)
-        #
-        #
-        self.l_debug("start","shortPoll={}".format(self.polyConfig['shortPoll']))
-        self.l_debug("start","longPoll={}".format(self.polyConfig['longPoll']))
+        # Short Poll
         val = self.getDriver('GV5')
+        self.l_debug("start","shortPoll={0} GV5={1}".format(self.polyConfig['shortPoll'],val))
         if val is None:
             self.setDriver('GV5',self.polyConfig['shortPoll'])
         elif (int(val) != 0):
             self.polyConfig['shortPoll'] = int(val)
+        # Long Poll
         val = self.getDriver('GV6')
+        self.l_debug("start","longPoll={0} GV6={1}".format(self.polyConfig['longPoll'],val))
         if val is None:
             self.setDriver('GV6',self.polyConfig['longPoll'])
         elif (int(val) != 0):
@@ -104,6 +115,7 @@ class HarmonyController(polyinterface.Controller):
         #
         self.l_info("start","Adding known hubs...")
         self._set_num_hubs(0)
+        self.reportDrivers()
         #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
         if self.polyConfig['nodes']:
             self.load_config()
@@ -128,12 +140,13 @@ class HarmonyController(polyinterface.Controller):
         for node in self.nodes:
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].longPoll()
-
+                
     def query(self):
         self.l_debug('query','...')
+        self.reportDrivers()
         for node in self.nodes:
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
-                self.nodes[node].reportDrivers()
+                self.nodes[node].query()
 
     def discover(self):
         hub_list = list()
@@ -335,6 +348,11 @@ class HarmonyController(polyinterface.Controller):
         self.l_info("_cmd_set_debug_mode",val)
         self.setDriver('GV4', val)
         
+    def _cmd_set_discover_mode(self,command):
+        val = int(command.get('value'))
+        self.l_info("_cmd_set_discover_mode",val)
+        self.setDriver('GV8', val)
+        
     def _cmd_set_shortpoll(self,command):
         val = int(command.get('value'))
         self.l_info("_cmd_set_short_poll",val)
@@ -358,7 +376,8 @@ class HarmonyController(polyinterface.Controller):
         'INSTALL_PROFILE': _cmd_install_profile,
         'SET_DEBUGMODE': _cmd_set_debug_mode,
         'SET_SHORTPOLL': _cmd_set_shortpoll,
-        'SET_LONGPOLL':  _cmd_set_longpoll
+        'SET_LONGPOLL':  _cmd_set_longpoll,
+        'SET_DI_MODE': _cmd_set_discover_mode
     }
     """ 
        Driver Details:

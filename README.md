@@ -29,13 +29,88 @@ to tell it about your hubs.
 
 Create a param with the name 'hub_myhubaddress' with a value: { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
 
+## Grouping the hubs
+
+Each activity and device is created with their Hub as primary.  This makes it easy to group the devices.  Just right click on a Hub, Activity or Device node and select 'group devices'.  This makes it easy to keep them all together.
+
+## HarmonyHub Controller
+
+This is the main node created by this nodeserver and manages the hubs.
+
+The settings for this node are
+* Node Server Connected
+   * Status of nodeserver process, this should be monitored by a program if you want to know the status
+   * There is a known issue in Polyglot that upon startup, this is not always properly set.
+* Version Major
+   * The major version of this nodeserver
+* Version Minor
+   * The minor version of this nodeserver
+* Hubs
+   * The number of hubs currently managed
+* Debug Mode
+   * The debug printing mode
+* Short Poll
+   * This is how often it will Poll the Hub to get the current activity
+* Long Poll
+   * Not currently used
+* Profile Status
+   * This is updated during commands like Discover,Install Profile, and Build Profile to show what is currently happening
+      * Uninitialized = This can only happen if the node server is installed, but never ran
+      * Not Sure = Can't be sure what the status is.  Currently we can not read the profile version.  Hopefully this will be added in the future
+      * Discovering Hubs
+      * Adding Nodes
+      * Building Profile
+      * Installing Profile
+      * ISY Reboot Required
+         * The nodeserver thinks your ISY needs rebooted.  This means a new profile was installed on the ISY, but currently we can't tell if the ISY has been rebooted, so reboot the node server after rebooting the ISY to clear this status
+      * Build Profile Failed
+      * Install Profile Failed
+      * PyHarmony Discover Failed
+      * Out of Date
+      * Write profile.zip Failed
+
+The commands for this node
+
+* Query
+   * Poll's all hubs and sets all status in the ISY
+* Discover
+   * Run's the harmony auto-discover to find your hubs, builds the profiel, and installs the profile
+   * This should be run whenever you add a new hub, or update activities or devices on your hub
+* Install Profile
+   * This uploads the currently built profile into the ISY.
+   * Typically this is not necessary, but sometimes the ISY needs the profile uploaded twice.
+* Build Profile
+   * This rebuilds the profile based on the currently managed hubs.
+   * During the processes you can watch the nodeserver log (Not the polyglot log) to see what it's doing.
+   * It will also update the 'Profile Status' to show what is happening from:
+      * Building Profile
+      * Installing Profile
+      * ISY Reboot Required
+   * Once it says ISY Reboot Required you should reboot the ISY.
+
+## Harmony Hub
+
+Each harmony hub found are configured will have a node.
+
+## Harmony Activity
+
+Each harmony hub activity will have a node.
+
+## Harmony Hub
+
+Each harmony hub device will have a node.
+
 ## Requirements
 
 * This has only been tested with ISY 5.0.11B so it is not garunteed to work with any other version.
 
 # Release Notes
 
+- 2.0.2 01/19/2018
+   - Fixed Intialization of hub params
+   - Allow auto-discover mode to be turned off in case it's ever needed
+   - A lot of documentation added please review.
 - 2.0.1 01/18/2018
-  - First announced release
+   - First announced release
 - 2.0.0 01/17/2018
-  - Not offically released
+   - Not offically released
