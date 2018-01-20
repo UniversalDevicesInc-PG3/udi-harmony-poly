@@ -106,6 +106,8 @@ Each harmony hub device will have a node.
 
 # Release Notes
 
+- 2.0.4 01/20/2018
+   - https://github.com/jimboca/udi-harmony-poly/issues/4
 - 2.0.3 01/20/2018
    - profile.zip is not longer in github, renamed to profile_default.zip to avoid conflicts on update.
 - 2.0.2 01/19/2018

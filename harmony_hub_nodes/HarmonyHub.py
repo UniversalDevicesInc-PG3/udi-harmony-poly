@@ -102,6 +102,9 @@ class HarmonyHub(polyinterface.Node):
         self._get_current_activity()
         self.reportDrivers()
 
+    def stop(self):
+        return self._close_client()
+        
     def _get_client(self):
         self.l_info("get_client","Initializing PyHarmony Client")
         try:
@@ -111,11 +114,25 @@ class HarmonyHub(polyinterface.Node):
             err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
             self.l_error("get_client",err_str)
             self._set_st(0)
+            self._close_client()
             return False
         self._set_st(1)
         self.l_info("get_client","PyHarmony client= " + str(self.client))
         return True
-    
+
+    def _close_client(self):
+        if self.client is not None:
+            try:
+                self.client.disconnect(send_close=True)
+            except:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
+                self.l_error("_close_client",err_str)
+                return False
+            finally:
+                self.client = None
+        return True
+        
     def _get_current_activity(self):
         try:
             ca = self.client.get_current_activity()

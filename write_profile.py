@@ -225,11 +225,12 @@ def write_profile(logger,hub_list):
 
     with open(config_file_name, 'w') as outfile:
         yaml.dump(config_data, outfile, default_flow_style=False)
-    
-        logger.info(pfx + " done.")
+    outfile.close()
 
     write_profile_zip(logger)
     
+    logger.info(pfx + " done.")
+
     return(config_data)
 
 #if warn_string_1 != "":

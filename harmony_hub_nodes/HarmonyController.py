@@ -255,12 +255,21 @@ class HarmonyController(polyinterface.Controller):
             self.l_info('load_config','Loading Harmony config {}'.format(CONFIG))
             try:
                 config_h = open(CONFIG, 'r')
+            except:
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
+                self.l_error('load_config','failed to open cfg={0} Error: {1}'.format(CONFIG,err_str))
+                return False
+            try:
                 self.harmony_config = yaml.load(config_h)
-                config_h.close
             except:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
                 self.l_error('load_config','failed to parse cfg={0} Error: {1}'.format(CONFIG,err_str))
+                return False
+            finally:
+                # This is always executed.
+                config_h.close()
         else:
             self.l_error('load_config','Harmony config does not exist {}'.format(CONFIG))
         
