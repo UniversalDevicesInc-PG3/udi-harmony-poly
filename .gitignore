@@ -7,6 +7,12 @@ __pycache__/
 logs/
 polyglot.py
 build.txt
+polyinterface
+# These are generated, so never commit
+profile.zip
+profile/version.txt
+profile/*/custom*.xml
+profile/nls/en_us.txt
 
 # C extensions
 *.so
@@ -79,8 +85,3 @@ target/
 *.yaml
 !config_template.yaml
 
-#Project specific
-polyinterface
-# These are generated, so never commit
-profile/*/custom*.xml
-profile/nls/en_us.txt

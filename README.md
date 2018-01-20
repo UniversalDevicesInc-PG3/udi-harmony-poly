@@ -106,6 +106,8 @@ Each harmony hub device will have a node.
 
 # Release Notes
 
+- 2.0.3 01/20/2018
+   - profile.zip is not longer in github, renamed to profile_default.zip to avoid conflicts on update.
 - 2.0.2 01/19/2018
    - Fixed Intialization of hub params
    - Allow auto-discover mode to be turned off in case it's ever needed

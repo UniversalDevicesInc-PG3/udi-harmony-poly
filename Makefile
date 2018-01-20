@@ -5,23 +5,17 @@
 CONFIG_FILE = config.yaml
 
 # Zip file for the ISY
-ZIP_FILE  = profile.zip
-# Source files put in the zip.
-XML_FiLES = profile/editor/*.xml profile/nodedef/*.xml 
-ZIP_FILES = profile/version.txt profile/nls/*.txt ${XML_FiLES}
+ZIP_FILE  = profile_default.zip
+# Source files put in the default profile zip.
+ZIP_FILES = profile/version.txt profile/nls/*.txt profile/editor/editors.xml profile/nodedef/nodedefs.xml
 
 all: ${ZIP_FILE}
 config: ${CONFIG_FILE}
 profile: ${ZIP_FILE}
 
 profile_default:
-	echo '0.0.0' > profile/version.txt
-	rm -f profile/nls/en_us.txt
-	cp profile/nls/en_us.tmpl profile/nls/en_us.txt
-	rm -f profile/*/custom*
-	rm ${ZIP_FILE}
+	rm -f ${ZIP_FILE}
 	${MAKE} profile
-
 
 #
 # Run xmlint on all xml files
@@ -34,7 +28,12 @@ check:
 # Generate the zip file of profile
 #
 ${ZIP_FILE}: ${ZIP_FILES}
+	echo '0.0.0.0' > profile/version.txt
+	cp -f profile/nls/en_us.tmpl profile/nls/en_us.txt
 	cd profile ; f=`echo $? | sed -e 's/profile\///g'` ; zip -r ../$@ $$f
+
+profile/version.txt:
+	echo '0.0.0.0' > profile/version.txt
 
 .PHONY: ${CONFIG_FILE}
 ${CONFIG_FILE}:
