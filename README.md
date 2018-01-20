@@ -106,6 +106,8 @@ Each harmony hub device will have a node.
 
 # Release Notes
 
+- 2.0.5 01/20/2018
+   - Fixed initialzation of Auto Discover mode.
 - 2.0.4 01/20/2018
    - https://github.com/jimboca/udi-harmony-poly/issues/4
 - 2.0.3 01/20/2018
