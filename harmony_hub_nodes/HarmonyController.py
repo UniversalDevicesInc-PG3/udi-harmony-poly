@@ -77,6 +77,7 @@ class HarmonyController(polyinterface.Controller):
         this is where you should start. No need to Super this method, the parent
         version does nothing.
         """
+        #polyinterface.LOGGER("start: This is {0} error {1}".format("an"))
         self.l_info('start','Starting Config=%s' % (self.polyConfig))
         # Split version into two floats.
         sv = VERSION.split(".");
@@ -317,7 +318,12 @@ class HarmonyController(polyinterface.Controller):
     def build_profile_from_list(self,hub_list):
         self.setDriver('GV7', 4)
         # This writes all the profile data files and returns our config info.
-        config_data = write_profile(LOGGER,hub_list)
+        try:
+            config_data = write_profile(LOGGER,hub_list)
+        except (Exception) as err:
+            self.l_error('build_profile','write_profile failed: {}'.format(err), exc_info=True)
+            self.setDriver('GV7', 7)
+
         # Reload the config we just generated.
         self.load_config()
         #
@@ -325,14 +331,14 @@ class HarmonyController(polyinterface.Controller):
         #
         st = self.install_profile()
         return st
-        
+
     def install_profile(self):
         self.setDriver('GV7', 5)
         try:
             self.poly.installprofile()
         except:
             err = sys.exc_info()[0]
-            self.setDriver('GV7', 7)
+            self.setDriver('GV7', 8)
             self.l_error('discovery','Install Profile Error: {}'.format(err))
             return False
         # Now a reboot is required
