@@ -205,7 +205,7 @@ class HarmonyController(polyinterface.Controller):
                 if not 'host' in cfgd:
                     self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
                     addit = False
-                if addIt:
+                if addit:
                     hub_list.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
                     
         #

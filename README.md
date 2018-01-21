@@ -112,6 +112,10 @@ Each harmony hub device will have a node.
 
 # Release Notes
 
+- 2.0.7 01/21/2018
+   - Fix issue with hub defined in custom params https://github.com/jimboca/udi-harmony-poly/issues/6
+- 2.0.6 01/20/2018
+   - Trap issues in write_profile when it fails https://github.com/jimboca/udi-harmony-poly/issues/5
 - 2.0.5 01/20/2018
    - Fixed initialzation of Auto Discover mode.
 - 2.0.4 01/20/2018
