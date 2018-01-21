@@ -103,7 +103,7 @@ Each harmony hub device will have a node.
 ## Requirements
 
 1. Polyglot V2 itself should be run on Raspian Stretch.
-  To check your version, 'cat /etc/os-release' and the first line should look like
+  To check your version, ```cat /etc/os-release``` and the first line should look like
 ```PRETTY_NAME="Raspbian GNU/Linux 9 (stretch)"```
   It is possible to upgrade from Jessie to Stretch, but I would recommend just reimaging the 
   https://www.raspberrypi.org/blog/raspbian-stretch/
