@@ -112,6 +112,9 @@ Each harmony hub device will have a node.
 
 # Release Notes
 
+- 2.0.8 01/21/2018
+   - Turn on more debug logging for pyharmony
+   - Start code reorg to in preparation for move to storing known hubs in local file instead of customParams
 - 2.0.7 01/21/2018
    - Fix issue with hub defined in custom params https://github.com/jimboca/udi-harmony-poly/issues/6
 - 2.0.6 01/20/2018

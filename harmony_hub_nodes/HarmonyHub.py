@@ -1,8 +1,9 @@
 
-import polyinterface,sys
+import polyinterface,sys,logging
 from traceback import format_exception
 from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
-from harmony_hub_funcs import harmony_hub_client,ip2long,long2ip,get_valid_node_name
+from harmony_hub_funcs import ip2long,long2ip,get_valid_node_name
+from pyharmony import client as harmony_client
 
 LOGGER = polyinterface.LOGGER
 
@@ -107,8 +108,10 @@ class HarmonyHub(polyinterface.Node):
         
     def _get_client(self):
         self.l_info("get_client","Initializing PyHarmony Client")
+        harmony_client.logger.setLevel(logging.INFO)
         try:
-            self.client = harmony_hub_client(self.host, self.port)
+            # TODO: Add activity_callback !!!
+            self.client = harmony_client.create_and_connect_client(self.host, self.port)
         except:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))

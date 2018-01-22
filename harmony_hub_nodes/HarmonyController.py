@@ -12,7 +12,7 @@
 #
 
 import polyinterface
-import json,re,time,sys,os.path,yaml
+import json,re,time,sys,os.path,yaml,logging
 from traceback import format_exception
 from copy import deepcopy
 from harmony_hub_nodes import HarmonyHub
@@ -21,6 +21,13 @@ from write_profile import write_profile
 
 LOGGER = polyinterface.LOGGER
 CONFIG = "config.yaml"
+
+# Turn on more logging for now.
+# TODO: Make this a new GV or use current logging GV?
+logging.getLogger('sleekxmpp').setLevel(logging.INFO)
+logging.getLogger('requests').setLevel(logging.INFO)
+logging.getLogger('urllib3').setLevel(logging.INFO)
+logging.getLogger('pyharmony').setLevel(logging.INFO)
 
 # Read the SERVER info from the json.
 with open('server.json') as data:
@@ -119,16 +126,25 @@ class HarmonyController(polyinterface.Controller):
         self.reportDrivers()
         #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
         if self.polyConfig['nodes']:
+            # Load the config info about the hubs.
             self.load_config()
+            # Load the hub info.
+            self.load_hubs()
+            # Restore known hubs from the poly config nodes
+            # The host and port info is stored in hubs
             for item in self.polyConfig['nodes']:
                 if item['isprimary'] and item['node_def_id'] != self.id:
                     self.l_debug("start","adding hub for item={}".format(item))
-                    self.add_hub_from_customData(item['address'])
+                    address = item['address']
+                    if address in self.hubs:
+                        ndata = self.hubs[address]
+                        self.add_hub(address,ndata['name'],ndata['host'],ndata['port'])
+                    else:
+                        self.l_error("start","Address {0} is not in hubs list: {1}".format(item['address'],self.hubs))
         else:
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
             self.discover()
-           
 
     def shortPoll(self):
         #self.l_debug('shortPoll','...')
@@ -151,7 +167,8 @@ class HarmonyController(polyinterface.Controller):
 
     def discover(self):
         hub_list = list()
-        self._set_num_hubs(0)
+        # Clear the hubs now so we clear some that may have been improperly added.
+        self.clear_hubs()
         #
         # Look for the hubs...
         #
@@ -206,7 +223,7 @@ class HarmonyController(polyinterface.Controller):
                     self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
                     addit = False
                 if addit:
-                    hub_list.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
+                    hub_list.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222, 'save': True})
                     
         #
         # Next the discovered ones
@@ -217,14 +234,15 @@ class HarmonyController(polyinterface.Controller):
                     'address': 'h'+id_to_address(config['uuid'],13),
                     'name':    get_valid_node_name(config['friendlyName']),
                     'host':    config['ip'],
-                    'port':    config['port']
+                    'port':    config['port'],
+                    'save':    True
                 }
             )
         #
         # Now really add them.
         #
         for cnode in hub_list:
-            self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'])
+            self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'],cnode['save'])
         #
         # Build the profile
         #
@@ -241,16 +259,35 @@ class HarmonyController(polyinterface.Controller):
             cdata['hubs'][address] = {'name': name, 'host': host, 'port': port}
             self.saveCustomData(cdata)
 
-    def add_hub_from_customData(self,address):
-        self.l_debug("add_hub_from_customData","Hub address {0}".format(address))
-        cdata = self.polyConfig['customData']
-        self.l_debug("add_hub_from_customData","customData={0}".format(cdata))
-        if 'hubs' in cdata:
-            if address in cdata['hubs']:
-                ndata = cdata['hubs'][address]
-                return self.add_hub(address,ndata['name'],ndata['host'],ndata['port'])
-        self.l_error("add_hub_from_customData","Hub address {0} not saved in customData={1}".format(address,cdata))
+    """
+    This pulls in the save hub data.  Old versions stored this in the 
+    customParams, but since we need it available from install.sh we
+    switched to using a local file.
+    """ 
+    def load_hubs(self):
+        self.hubs = list()
+        # Hack... if customParams has clear_hubs=1 then just clear them :(
+        cdata = self.polyConfig['customParams']
+        param_name = 'clear_hubs'
+        if param_name in self.polyConfig['customParams'] and int(self.polyConfig['customParams'][param_name]) == 1:
+            self.l_info("start","Clearing known hubs, you will need to run discover again since customParam {0} = {1}".format(param_name,self.polyConfig['customParams'][param_name]))
+            # TODO: This doesn't actually save back the customParam, user needs to delete it?
+            self.polyConfig['customParams'][param_name] = 0
+            self.clear_hubs()
+        else:
+            if not 'hubs' in self.polyConfig['customData']:
+                self.polyConfig['customData']['hubs'] = {}
+            self.hubs = self.polyConfig['customData']['hubs']
+        # Always clear it
+        self.addCustomParam({param_name: 0})
 
+    def clear_hubs(self):
+        # Clear all the saved hub data.
+        self._set_num_hubs(0)
+        cdata = self.polyConfig['customData']
+        cdata['hubs'] = {}
+        self.saveCustomData(cdata)
+        
     def load_config(self):
         if os.path.exists(CONFIG):
             self.l_info('load_config','Loading Harmony config {}'.format(CONFIG))
