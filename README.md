@@ -120,6 +120,10 @@ Each harmony hub device will have a node.
 
 # Release Notes
 
+- 2.1.1 01/24/2018
+   - Last minute change in 2.1.0 caused profile.zip to no longer be written out.
+   - If you already installed 2.1.0 please run build profile again, and reboot
+   - If you haven't then please read instructions below.
 - 2.1.0 01/24/2018
    - When updating the node server, click cancel so the ISY will not be rebooted, it will need to be rebooted after restarting the nodeserver.
    - Added new [Activity Method setting](https://github.com/jimboca/udi-harmony-poly/blob/master/README.md#activity-method).  Setting this to Callback should greatly stop or greatly reduce the chances of errors caused by constantly polling the hubs for current activity, and activities are updated almost instantaneously!  

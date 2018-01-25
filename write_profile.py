@@ -93,7 +93,7 @@ def write_profile(logger,hub_list):
         nls.write(re.sub(r'^(ND-HarmonyController-NAME = Harmony Hub Controller).*',r'\1 {0}'.format(sd['version']),line))
     nls_tmpl.close()
 
-    logger.info("{0} Writing profile/nodedef/custom.xml and profile/editor/custom.xml")
+    logger.info("{0} Writing profile/nodedef/custom.xml and profile/editor/custom.xml".format(pfx))
     nodedef = open("profile/nodedef/custom.xml", "w")
     editor  = open("profile/editor/custom.xml", "w")
     nodedef.write("<nodeDefs>\n")
@@ -242,6 +242,8 @@ def write_profile(logger,hub_list):
         outfile.write(sd['version'])
     outfile.close()
 
+    write_profile_zip(logger)
+    
     logger.info(pfx + " done.")
 
     return(config_data)
@@ -252,13 +254,15 @@ def write_profile_zip(logger):
     abs_src = os.path.abspath(src)
     with zipfile.ZipFile('profile.zip', 'w') as zf:
         for dirname, subdirs, files in os.walk(src):
-            for filename in files:
-                if filename.endswith('.xml') or filename.endswith('txt'):
-                    absname = os.path.abspath(os.path.join(dirname, filename))
-                    arcname = absname[len(abs_src) + 1:]
-                    logger.info('write_profile_zip: %s as %s' % (os.path.join(dirname, filename),
-                                                arcname))
-                    zf.write(absname, arcname)
+            # Ignore dirs starint with a dot, stupid .AppleDouble...
+            if not "/." in dirname:
+                for filename in files:
+                    if filename.endswith('.xml') or filename.endswith('txt'):
+                        absname = os.path.abspath(os.path.join(dirname, filename))
+                        arcname = absname[len(abs_src) + 1:]
+                        logger.info('write_profile_zip: %s as %s' % (os.path.join(dirname, filename),
+                                                                     arcname))
+                        zf.write(absname, arcname)
     zf.close()
 
 
