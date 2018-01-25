@@ -294,11 +294,11 @@ class HarmonyController(polyinterface.Controller):
             else:
                 self.hubs = load_hubs_file(LOGGER)
                 # Temp test to put them back...
-                hdata = dict()
-                for hub in self.hubs:
-                    hdata[hub['address']] = hub
-                self.polyConfig['customData']['hubs'] = hdata
-                self.saveCustomData(self.polyConfig['customData'])
+                #hdata = dict()
+                #for hub in self.hubs:
+                #    hdata[hub['address']] = hub
+                #self.polyConfig['customData']['hubs'] = hdata
+                #self.saveCustomData(self.polyConfig['customData'])
                 
 
         # Always clear it so the default value shows for the user.
