@@ -137,6 +137,7 @@ class HarmonyController(polyinterface.Controller):
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
             self.discover()
+        self.l_info("start","done")
 
     def shortPoll(self):
         #self.l_debug('shortPoll','...')
