@@ -285,7 +285,9 @@ class HarmonyController(polyinterface.Controller):
                     self.saveCustomData(cdata)
                     if 'hubs' in self.polyConfig['customData']:
                         # WTF, it wasn't deleted?
-                        self.l_info("load_hubs","customData['hubs'] was not deleted? {0}".format(self.polyConfig))
+                        self.l_error("load_hubs","customData['hubs'] was not deleted? {0}".format(self.polyConfig))
+                    else:
+                        self.l_info("load_hubs","customData['hubs'] was deleted".format(self.polyConfig))
                     # Need to generate new profile
                     self.l_info("load_hubs","Building profile since data was migrated to external file.")
                     self.build_profile()
