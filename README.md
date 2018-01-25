@@ -37,23 +37,25 @@ Each activity and device is created with their Hub as primary.  This makes it ea
 
 This is the main node created by this nodeserver and manages the hubs.
 
+### Node Settings
 The settings for this node are
-* Node Server Connected
+
+#### Node Server Connected
    * Status of nodeserver process, this should be monitored by a program if you want to know the status
    * There is a known issue in Polyglot that upon startup, this is not always properly set.
-* Version Major
+#### Version Major
    * The major version of this nodeserver
-* Version Minor
+#### Version Minor
    * The minor version of this nodeserver
-* Hubs
+#### Hubs
    * The number of hubs currently managed
-* Debug Mode
+#### Debug Mode
    * The debug printing mode
-* Short Poll
+#### Short Poll
    * This is how often it will Poll the Hub to get the current activity
-* Long Poll
+#### Long Poll
    * Not currently used
-* Profile Status
+#### Profile Status
    * This is updated during commands like Discover,Install Profile, and Build Profile to show what is currently happening
       * Uninitialized = This can only happen if the node server is installed, but never ran
       * Not Sure = Can't be sure what the status is.  Currently we can not read the profile version.  Hopefully this will be added in the future
@@ -68,18 +70,24 @@ The settings for this node are
       * PyHarmony Discover Failed
       * Out of Date
       * Write profile.zip Failed
+#### Activity Method
+   * None = Don't watch Harmony for activity changes
+   * Short Poll = Poll Harmony Hub during each Short Poll Interval (Old default method)
+   * Callback = The Harmony Hub reports changes directly to the nodeserver (prefered new method)
+
+### Node Commands
 
 The commands for this node
 
-* Query
+#### Query
    * Poll's all hubs and sets all status in the ISY
-* Discover
+#### Discover
    * Run's the harmony auto-discover to find your hubs, builds the profiel, and installs the profile
    * This should be run whenever you add a new hub, or update activities or devices on your hub
-* Install Profile
+#### Install Profile
    * This uploads the currently built profile into the ISY.
    * Typically this is not necessary, but sometimes the ISY needs the profile uploaded twice.
-* Build Profile
+#### Build Profile
    * This rebuilds the profile based on the currently managed hubs.
    * During the processes you can watch the nodeserver log (Not the polyglot log) to see what it's doing.
    * It will also update the 'Profile Status' to show what is happening from:
@@ -112,6 +120,11 @@ Each harmony hub device will have a node.
 
 # Release Notes
 
+- 2.1.0 01/24/2018
+   - When updating the node server, click cancel so the ISY will not be rebooted, it will need to be rebooted after restarting the nodeserver.
+   - Added new Activity Method setting.  Setting this to Callback should greatly stop or greatly reduce the chances of errors caused by constantly polling the hubs for current activity, and activities are updated almost instantaneously!
+   - The list of hubs is stored in hubs.json so the profile can be updated at install time.
+   - All versions after this will automatically update the profile when necessary at install time. For this version when you restart the nodeserver it will rebuild the profile automatically and you will need to restart the ISY when it shows Profile Status = ISY Reboot Required
 - 2.0.8 01/21/2018
    - Turn on more debug logging for pyharmony
    - Start code reorg to in preparation for move to storing known hubs in local file instead of customParams

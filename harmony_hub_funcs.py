@@ -1,6 +1,11 @@
 
 from pyharmony import ha_get_client
-import os,socket,struct,hashlib,re
+import os,socket,struct,hashlib,re,json,logging
+
+logging.getLogger('sleekxmpp').setLevel(logging.INFO)
+logging.getLogger('requests').setLevel(logging.INFO)
+logging.getLogger('urllib3').setLevel(logging.INFO)
+logging.getLogger('pyharmony').setLevel(logging.INFO)
 
 def myint(value):
     """ round and convert to int """
@@ -70,3 +75,60 @@ def id_to_address(address,slen=14):
 def get_valid_node_name(name):
     # Remove <>`~!@#$%^&*(){}[]?/\;:"'` characters from names
     return re.sub(r"[<>`~!@#$%^&*(){}[\]?/\\;:\"']+", "", name)
+
+HUBS_FILE = 'hubs.json'
+
+def load_hubs_file(logger):
+    try:
+        with open(HUBS_FILE) as data:
+            hubs = json.load(data)
+            data.close()
+    except (Exception) as err:
+        logger.error('harmony_hub_funcs:load_hubs_file: failed to read hubs file {0}: {1}'.format(HUBS_FILE,err), exc_info=True)
+        return False
+    else:         
+        return hubs
+
+def save_hubs_file(logger,hubs):
+    try:
+        with open(HUBS_FILE, 'w') as outfile:
+            json.dump(hubs, outfile, sort_keys=True, indent=4)     
+    except (Exception) as err:
+        logger.error('harmony_hub_funcs:save_hubs_file: failed to write {0}: {1}'.format(HUBS_FILE,err), exc_info=True)
+        return False
+    else:
+        outfile.close()   
+    return True
+
+def get_server_data(logger):
+    # Read the SERVER info from the json.
+    try:
+        with open('server.json') as data:
+            serverdata = json.load(data)
+    except Exception as err:
+        logger.error('harmony_hub_funcs:get_server_data: failed to read hubs file {0}: {1}'.format('server.json',err), exc_info=True)
+        return False
+    data.close()
+    # Get the version info
+    try:
+        version = serverdata['credits'][0]['version']
+    except (KeyError, ValueError):
+        logger.info('Version not found in server.json.')
+        version = '0.0.0.0'
+    # Split version into two floats.
+    sv = version.split(".");
+    v1 = 0;
+    v2 = 0;
+    if len(sv) == 1:
+        v1 = int(v1[0])
+    elif len(sv) > 1:
+        v1 = float("%s.%s" % (sv[0],str(sv[1])))
+        if len(sv) == 3:
+            v2 = int(sv[2])
+        else:
+            v2 = float("%s.%s" % (sv[2],str(sv[3])))
+    serverdata['version'] = version
+    serverdata['version_major'] = v1
+    serverdata['version_minor'] = v2
+    return serverdata
+

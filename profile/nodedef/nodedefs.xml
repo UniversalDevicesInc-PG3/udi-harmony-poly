@@ -20,6 +20,8 @@
       <st id="GV7" editor="PROFILE_STATUS" />
       <!-- auto discover status -->
       <st id="GV8" editor="AUTODI" />
+      <!-- activiy watch method -->
+      <st id="GV9" editor="ACTMET" />
     </sts>
     <cmds>
       <sends>
@@ -38,6 +40,9 @@
         </cmd>
         <cmd id="SET_DI_MODE">
           <p id="" editor="AUTODI" init="GV8" />
+        </cmd>
+        <cmd id="SET_ACTIVITY_METHOD">
+          <p id="" editor="ACTMET" init="GV9" />
         </cmd>
         <cmd id="QUERY" />
         <cmd id="DISCOVER" />

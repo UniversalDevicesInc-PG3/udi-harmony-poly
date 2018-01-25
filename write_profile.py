@@ -1,11 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import yaml,collections,re,os,zipfile
-from harmony_hub_funcs import harmony_hub_client
+from harmony_hub_funcs import harmony_hub_client,get_server_data,load_hubs_file
 
 pfx = "write_profile:"
 
 config_file_name = 'config.yaml'
+hubs_file_name = 'hubs.json'
+VERSION_FILE = "profile/version.txt"
 
 #config_file = open(config_file_name, 'r')
 #config_data = yaml.load(config_file)
@@ -76,15 +78,22 @@ NLS_TMPL = "%s-%d = %s\n"
 
 def write_profile(logger,hub_list):
     config_data = {}
+    sd = get_server_data(logger)
+    if sd is False:
+        logger.error("Unable to complete without server data...")
+        return False
     #
     # Start the nls with the template data.
     #
+    en_us_txt = "profile/nls/en_us.txt"
+    logger.info("{0} Writing {1}".format(pfx,en_us_txt))
     nls_tmpl = open("profile/nls/en_us.tmpl", "r")
-    nls      = open("profile/nls/en_us.txt",  "w")
-    for line in nls_tmpl:
-        nls.write(line)
+    nls      = open(en_us_txt,  "w")
+    for line in nls_tmpl: 
+        nls.write(re.sub(r'^(ND-HarmonyController-NAME = Harmony Hub Controller).*',r'\1 {0}'.format(sd['version']),line))
     nls_tmpl.close()
 
+    logger.info("{0} Writing profile/nodedef/custom.xml and profile/editor/custom.xml")
     nodedef = open("profile/nodedef/custom.xml", "w")
     editor  = open("profile/editor/custom.xml", "w")
     nodedef.write("<nodeDefs>\n")
@@ -107,6 +116,8 @@ def write_profile(logger,hub_list):
     config_data['info']['activities'] = list()
     config_data['info']['functions'] = list()
     warn_string_1 = ""
+    if len(hub_list) == 0:
+        logger.warning("{0} Hub list is empty?".format(pfx))
     for ahub in hub_list:
         #
         # Process this hub.
@@ -226,16 +237,14 @@ def write_profile(logger,hub_list):
     with open(config_file_name, 'w') as outfile:
         yaml.dump(config_data, outfile, default_flow_style=False)
     outfile.close()
-
-    write_profile_zip(logger)
     
+    with open(VERSION_FILE, 'w') as outfile:
+        outfile.write(sd['version'])
+    outfile.close()
+
     logger.info(pfx + " done.")
 
     return(config_data)
-
-#if warn_string_1 != "":
-#    print "WARNING: If you are upgrading from 0.3.x and using any of the following in an ISY program, you will need to fix them"
-#    print warn_string_1
 
 
 def write_profile_zip(logger):
@@ -251,20 +260,40 @@ def write_profile_zip(logger):
                                                 arcname))
                     zf.write(absname, arcname)
     zf.close()
-    
+
+
 if __name__ == "__main__":
-    import logging
+    import logging,json
     logger = logging.getLogger(__name__)
     logging.basicConfig(
         level=10,
         format='%(levelname)s:\t%(name)s\t%(message)s'
     )
     logger.setLevel(logging.DEBUG)
-    write_profile(logger,
-        [
-            { "address": "familyroom", "name": "HarmonyHub FamilyRoom", "host": "192.168.86.82" },
-            { "address": "masterbedroom", "name": "HarmonyHub MasterBedroom", "host": "192.168.86.80" },
-        ]
-    )
+    # Only write the profile if the version is updated.
+    sd = get_server_data(logger)
+    if sd is not False:
+        local_version = None
+        try:
+            with open(VERSION_FILE,'r') as vfile:
+                local_version = vfile.readline()
+                local_version = local_version.rstrip()
+                vfile.close()
+        except (Exception) as err:
+            logger.error('{0} failed to read local version from {0}: {1}'.format(pfx,VERSION_FILE,err), exc_info=True)
+        if local_version == sd['profile_version']:
+            logger.info('{0} Not Generating new profile since local version {1} is the same current {2}'.format(pfx,local_version,sd['profile_version']))
+        else:
+            logger.info('{0} Generating new profile since local version {1} is not current {2}'.format(pfx,local_version,sd['profile_version']))
+            hubs = load_hubs_file(logger)
+            if hubs is False:
+                logger.error('{0} Unable to load hubs file which does not exist on first run or before 2.1.0, please run Build Profile in admin console after restarting this nodeserver'.format(pfx))
+                # If no profile.zip exist, then generate it.
+                if not os.path.exists('profile.zip'):
+                    logger.info('{0}: Generating default profile.zip')
+                    write_profile_zip(logger)
+            else:
+                write_profile(logger,hubs)
+
 
 

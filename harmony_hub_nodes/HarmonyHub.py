@@ -78,17 +78,14 @@ class HarmonyHub(polyinterface.Node):
         self.query();
         self.do_poll = True
         self.l_info("start","done hub '%s' '%s' %s" % (self.address, self.name, self.host))
-
+        
     def shortPoll(self):
-        # TODO: Poll the hub activity
-        #self.l_debug("shortPoll","start")
-        # If we had a connection issue previously, try to fix it.
-        if self.st == 0:
-            self.l_debug("poll","Calling get_client st=%d" % (self.st))
-            if not self._get_client():
-                return False
-        self._get_current_activity()
-        return True 
+        if self.check_client():
+            if self.parent.activity_method == 1:
+                # Old poll method
+                self._get_current_activity()
+        else:
+            return False
         
     def longPoll(self):
         pass
@@ -105,13 +102,51 @@ class HarmonyHub(polyinterface.Node):
 
     def stop(self):
         return self._close_client()
+
+    def check_client(self):
+        if self.client.state.current_state() != 'connected':
+            self.l_error("check_client","Client no longer connected. client.state={0}".format(self.client.state.current_state()))
+            self._close_client()
+        # If the activity method change, we need to restart the client for the register callback.
+        if self.last_activity_method != self.parent.activity_method and (self.last_activity_method == 2 or self.parent.activity_method == 2):
+            self.st = 0
+        # If we had a connection issue previously, try to fix it.
+        if self.st == 0:
+            self.l_debug("check_client","Calling get_client st=%d" % (self.st))
+            if not self._get_client():
+                return False
+        return True
         
+    def _set_current_activity(self, id, force=False):
+        """ 
+        Update Polyglot with the current activity.
+        """
+        val   = int(id)
+        if self.current_activity == val:
+            return True
+        # The harmony activity number
+        self.current_activity = val
+        index = self._get_activity_index(val)
+        self.l_info("_set_current_activity","activity=%d, index=%d" % (self.current_activity,index))
+        self.setDriver('GV3', index)
+        # Make the activity node current, unless it's -1 which is poweroff
+        ignore_id=False
+        if id != -1:
+            self.activity_nodes[str(id)]._set_st(1)
+            ignore_id=id
+        # Update all the other activities to not be the current.
+        self._set_all_activities(0,ignore_id=ignore_id)
+        return True
+
     def _get_client(self):
         self.l_info("get_client","Initializing PyHarmony Client")
         harmony_client.logger.setLevel(logging.INFO)
+        self.last_activity_method = self.parent.activity_method
         try:
-            # TODO: Add activity_callback !!!
-            self.client = harmony_client.create_and_connect_client(self.host, self.port)
+            if self.parent.activity_method == 2:
+                self.client = harmony_client.create_and_connect_client(self.host, self.port, self._set_current_activity)
+            else:
+                self.client = harmony_client.create_and_connect_client(self.host, self.port)
         except:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
@@ -134,6 +169,7 @@ class HarmonyHub(polyinterface.Node):
                 return False
             finally:
                 self.client = None
+                self._set_st(0)
         return True
         
     def _get_current_activity(self):
@@ -275,27 +311,6 @@ class HarmonyHub(polyinterface.Node):
             # TODO: This always returns False :(
             ret = True
         return ret
-
-    def _set_current_activity(self, id, force=False):
-        """ 
-        Update Polyglot with the current activity.
-        """
-        val   = int(id)
-        if self.current_activity == val:
-            return True
-        # The harmony activity number
-        self.current_activity = val
-        index = self._get_activity_index(val)
-        self.l_info("_set_current_activity","activity=%d, index=%d" % (self.current_activity,index))
-        self.setDriver('GV3', index)
-        # Make the activity node current, unless it's -1 which is poweroff
-        ignore_id=False
-        if id != -1:
-            self.activity_nodes[str(id)]._set_st(1)
-            ignore_id=id
-        # Update all the other activities to not be the current.
-        self._set_all_activities(0,ignore_id=ignore_id)
-        return True
 
     def _cmd_set_current_activity(self, command):
         """ 

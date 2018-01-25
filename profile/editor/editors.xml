@@ -34,4 +34,8 @@
     <range uom="25" subset="0,1" nls="ADI"/>
   </editor>
   
+  <editor id="ACTMET">
+    <range uom="25" subset="0-2" nls="ACM"/>
+  </editor>
+  
 </editors>

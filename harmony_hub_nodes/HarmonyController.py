@@ -12,11 +12,11 @@
 #
 
 import polyinterface
-import json,re,time,sys,os.path,yaml,logging
+import json,re,time,sys,os.path,yaml,logging,json
 from traceback import format_exception
 from copy import deepcopy
 from harmony_hub_nodes import HarmonyHub
-from harmony_hub_funcs import id_to_address,get_valid_node_name,long2ip
+from harmony_hub_funcs import id_to_address,get_valid_node_name,long2ip,get_server_data,load_hubs_file,save_hubs_file
 from write_profile import write_profile
 
 LOGGER = polyinterface.LOGGER
@@ -29,14 +29,7 @@ logging.getLogger('requests').setLevel(logging.INFO)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 logging.getLogger('pyharmony').setLevel(logging.INFO)
 
-# Read the SERVER info from the json.
-with open('server.json') as data:
-    SERVERDATA = json.load(data)
-try:
-    VERSION = SERVERDATA['credits'][0]['version']
-except (KeyError, ValueError):
-    LOGGER.info('Version not found in server.json.')
-    VERSION = '0.0.0'
+
 
 class HarmonyController(polyinterface.Controller):
     """
@@ -69,7 +62,8 @@ class HarmonyController(polyinterface.Controller):
         Super runs all the parent class necessities. You do NOT have
         to override the __init__ method, but if you do, you MUST call super.
         """
-        self.l_info('init','Initializing VERSION=%s' % (VERSION))
+        self.serverdata = get_server_data(LOGGER)
+        self.l_info('init','Initializing VERSION=%s' % (self.serverdata['version']))
         super(HarmonyController, self).__init__(polyglot)
         self.name = 'HarmonyHub Controller'
         self.address = 'harmonyctrl'
@@ -86,20 +80,8 @@ class HarmonyController(polyinterface.Controller):
         """
         #polyinterface.LOGGER("start: This is {0} error {1}".format("an"))
         self.l_info('start','Starting Config=%s' % (self.polyConfig))
-        # Split version into two floats.
-        sv = VERSION.split(".");
-        v1 = 0;
-        v2 = 0;
-        if len(sv) == 1:
-            v1 = int(vl[0])
-        elif len(sv) > 1:
-            v1 = float("%s.%s" % (sv[0],str(sv[1])))
-            if len(sv) == 3:
-                v2 = int(sv[2])
-            else:
-                v2 = float("%s.%s" % (sv[2],str(sv[3])))
-        self.setDriver('GV1', v1)
-        self.setDriver('GV2', v2)
+        self.setDriver('GV1', self.serverdata['version_major'])
+        self.setDriver('GV2', self.serverdata['version_minor'])
         # Set Profile Status as Up To Date, if it's status 6=ISY Reboot Required
         val = self.getDriver('GV7')
         if val is None or int(val) == 6 or int(val) == 0:
@@ -118,12 +100,32 @@ class HarmonyController(polyinterface.Controller):
             self.setDriver('GV6',self.polyConfig['longPoll'])
         elif (int(val) != 0):
             self.polyConfig['longPoll'] = int(val)
+        # Activiy method
+        val = self.getDriver('GV9')
+        if val is None:
+            self.activity_method = 2 # The default
+        else:
+            self.activity_method = int(val)
+        self.l_debug("start","GV9={0} activity_method={1}".format(val,self.activity_method))
+
+        # New vesions need to force an update
+        cdata = self.polyConfig['customData']
+        if not 'cver' in cdata:
+            cdata['cver'] = 1
+        self.l_debug("start","cver={0}".format(cdata['cver']))
+        if int(cdata['cver']) < 2:
+            self.l_debug("start","updating myself since cver {0} < 2".format(cdata['cver']))
+            # Force an update.
+            self.addNode(self,update=True)
+            cdata['cver'] = 2
+            self.saveCustomData(cdata)
+
         #
         # Add Hubs from the config
         #
         self.l_info("start","Adding known hubs...")
         self._set_num_hubs(0)
-        self.reportDrivers()
+        self.reportDrivers() # Removed for now since it was causing issues.
         #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
         if self.polyConfig['nodes']:
             # Load the config info about the hubs.
@@ -131,16 +133,7 @@ class HarmonyController(polyinterface.Controller):
             # Load the hub info.
             self.load_hubs()
             # Restore known hubs from the poly config nodes
-            # The host and port info is stored in hubs
-            for item in self.polyConfig['nodes']:
-                if item['isprimary'] and item['node_def_id'] != self.id:
-                    self.l_debug("start","adding hub for item={}".format(item))
-                    address = item['address']
-                    if address in self.hubs:
-                        ndata = self.hubs[address]
-                        self.add_hub(address,ndata['name'],ndata['host'],ndata['port'])
-                    else:
-                        self.l_error("start","Address {0} is not in hubs list: {1}".format(item['address'],self.hubs))
+            self.add_hubs()
         else:
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
@@ -223,7 +216,7 @@ class HarmonyController(polyinterface.Controller):
                     self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
                     addit = False
                 if addit:
-                    hub_list.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222, 'save': True})
+                    hub_list.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
                     
         #
         # Next the discovered ones
@@ -242,22 +235,24 @@ class HarmonyController(polyinterface.Controller):
         # Now really add them.
         #
         for cnode in hub_list:
-            self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'],cnode['save'])
+            self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'])
+        self.save_hubs()
         #
         # Build the profile
         #
-        return self.build_profile_from_list(hub_list)
+        return self.build_profile()
 
-    def add_hub(self,address,name,host,port,save=True):
-        self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} save={4}".format(address,name,host,port,save))
+    def add_hub(self,address,name,host,port,update=True):
+        self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} update={4}".format(address,name,host,port,update))
         self.addNode(HarmonyHub(self, address, name, host, port))
         self._set_num_hubs(self.num_hubs + 1)
-        if save:
-            cdata = self.polyConfig['customData']
-            if not 'hubs' in cdata:
-                cdata['hubs'] = {}
-            cdata['hubs'][address] = {'name': name, 'host': host, 'port': port}
-            self.saveCustomData(cdata)
+        if update:
+            self.update_hub_list({'address': address, 'name': name, 'host': host, 'port': port})
+
+    def add_hubs(self):
+        self._set_num_hubs(0)
+        for hub in self.hubs:
+            self.add_hub(hub['address'], hub['name'], hub['host'], hub['port'], update=False)
 
     """
     This pulls in the save hub data.  Old versions stored this in the 
@@ -267,26 +262,56 @@ class HarmonyController(polyinterface.Controller):
     def load_hubs(self):
         self.hubs = list()
         # Hack... if customParams has clear_hubs=1 then just clear them :(
+        # This is the only way to clear a bad IP address until my changes to pyharmony are accepted.
         cdata = self.polyConfig['customParams']
         param_name = 'clear_hubs'
         if param_name in self.polyConfig['customParams'] and int(self.polyConfig['customParams'][param_name]) == 1:
-            self.l_info("start","Clearing known hubs, you will need to run discover again since customParam {0} = {1}".format(param_name,self.polyConfig['customParams'][param_name]))
-            # TODO: This doesn't actually save back the customParam, user needs to delete it?
-            self.polyConfig['customParams'][param_name] = 0
+            self.l_info("load_hubs","Clearing known hubs, you will need to run discover again since customParam {0} = {1}".format(param_name,self.polyConfig['customParams'][param_name]))
             self.clear_hubs()
         else:
-            if not 'hubs' in self.polyConfig['customData']:
-                self.polyConfig['customData']['hubs'] = {}
-            self.hubs = self.polyConfig['customData']['hubs']
-        # Always clear it
+            # If hubs exists in the customData, convert to .hubs list and save the json
+            if 'hubs' in self.polyConfig['customData']:
+                # Turn customData hubs hash into a list...
+                cdata = self.polyConfig['customData']
+                self.l_info("load_hubs","Converting hubs from Polyglot DB to local file for {0}".format(cdata))
+                # From: cdata['hubs'][address] = {'name': name, 'host': host, 'port': port}
+                for address in cdata['hubs']:
+                    hub_c = deepcopy(cdata['hubs'][address])
+                    hub_c['address'] = address
+                    self.hubs.append(hub_c)
+                # Save the new json
+                if self.save_hubs():
+                    del cdata['hubs']
+                    self.saveCustomData(cdata)
+                    # Need to generate new profile
+                    self.build_profile()
+            else:
+                self.hubs = load_hubs_file(LOGGER)
+
+        # Always clear it so the default value shows for the user.
         self.addCustomParam({param_name: 0})
+
+    # Add the hub to the list, replacing if necessary if the address exists.
+    def update_hub_list (self,hub):
+        new = list()
+        seen = False
+        for ehub in self.hubs:
+            if hub['address'] == ehub['address']:
+                new.append(hub)
+                seen = True
+            else:
+                new.append(ehub)
+        if not seen:
+            new.append(hub)
+        self.hubs = new
+
+    def save_hubs(self):
+        return save_hubs_file(LOGGER,self.hubs)
 
     def clear_hubs(self):
         # Clear all the saved hub data.
         self._set_num_hubs(0)
-        cdata = self.polyConfig['customData']
-        cdata['hubs'] = {}
-        self.saveCustomData(cdata)
+        self.hubs = list()
         
     def load_config(self):
         if os.path.exists(CONFIG):
@@ -337,26 +362,15 @@ class HarmonyController(polyinterface.Controller):
         
     def l_debug(self, name, string):
         LOGGER.debug("%s:%s: %s" % (self.id,name,string))
-
-    def build_profile_from_customData(self):
-        cdata = self.polyConfig['customData']
-        if not 'hubs' in cdata:
-            self.l_error("build_profile","No hubs in customData to build: {0}".format(cdata))
-            return False
-        # Turn customData hubs hash into a list...
-        # From: cdata['hubs'][address] = {'name': name, 'host': host, 'port': port}
-        hub_list = list()
-        for address in cdata['hubs']:
-            hub_c = deepcopy(cdata['hubs'][address])
-            hub_c['address'] = address
-            hub_list.append(hub_c)
-        return self.build_profile_from_list(hub_list)
         
-    def build_profile_from_list(self,hub_list):
+    def build_profile(self):
+        """
+        Build the profile from our internal list of hubs
+        """
         self.setDriver('GV7', 4)
         # This writes all the profile data files and returns our config info.
         try:
-            config_data = write_profile(LOGGER,hub_list)
+            config_data = write_profile(LOGGER,self.hubs)
         except (Exception) as err:
             self.l_error('build_profile','write_profile failed: {}'.format(err), exc_info=True)
             self.setDriver('GV7', 7)
@@ -389,7 +403,7 @@ class HarmonyController(polyinterface.Controller):
         
     def _cmd_build_profile(self,command):
         self.l_info("_cmd_build_profile","building...")
-        self.build_profile_from_customData()
+        self.build_profile()
         
     def _cmd_install_profile(self,command):
         self.l_info("_cmd_install_profile","installing...")
@@ -404,6 +418,12 @@ class HarmonyController(polyinterface.Controller):
         val = int(command.get('value'))
         self.l_info("_cmd_set_discover_mode",val)
         self.setDriver('GV8', val)
+        
+    def _cmd_set_activity_method(self,command):
+        val = int(command.get('value'))
+        self.l_info("_cmd_set_activity_method",val)
+        self.setDriver('GV9', val)
+        self.activity_method = val # The default
         
     def _cmd_set_shortpoll(self,command):
         val = int(command.get('value'))
@@ -429,7 +449,8 @@ class HarmonyController(polyinterface.Controller):
         'SET_DEBUGMODE': _cmd_set_debug_mode,
         'SET_SHORTPOLL': _cmd_set_shortpoll,
         'SET_LONGPOLL':  _cmd_set_longpoll,
-        'SET_DI_MODE': _cmd_set_discover_mode
+        'SET_DI_MODE': _cmd_set_discover_mode,
+        'SET_ACTIVITY_METHOD': _cmd_set_activity_method
     }
     """ 
        Driver Details:
@@ -443,5 +464,6 @@ class HarmonyController(polyinterface.Controller):
         {'driver': 'GV5', 'value': 5,  'uom': 25}, # integer: shortpoll
         {'driver': 'GV6', 'value': 60, 'uom': 25}, # integer: longpoll
         {'driver': 'GV7', 'value': 0,  'uom': 25}, #    bool: Profile status
-        {'driver': 'GV8', 'value': 1,  'uom': 25}  #    bool: Auto Discover
+        {'driver': 'GV8', 'value': 1,  'uom': 25}, #    bool: Auto Discover
+        {'driver': 'GV9', 'value': 2,  'uom': 25}  #    bool: Activity Method
     ]
