@@ -9,5 +9,5 @@ install:
     - sudo apt-get install libxml2-utils libxml2-dev
 
 script:
+    - xmllint --noout profile/*/*.xml
     - ./harmony_hub.py
-    - xmllint --nooute profile/*/*.xml
