@@ -116,7 +116,7 @@ class HarmonyController(polyinterface.Controller):
             self.l_debug("start","updating myself since cver {0} < 2".format(self.polyConfig['customData']['cver']))
             # Force an update.
             self.addNode(self,update=True)
-            self.polyConfig['customData']['cver'] = 2
+            self.polyConfig['customData']['cver'] = 3
             self.saveCustomData(self.polyConfig['customData'])
 
         #
