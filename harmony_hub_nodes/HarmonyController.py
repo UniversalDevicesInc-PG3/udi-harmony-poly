@@ -283,10 +283,21 @@ class HarmonyController(polyinterface.Controller):
                 if self.save_hubs():
                     del cdata['hubs']
                     self.saveCustomData(cdata)
+                    if 'hubs' in self.polyConfig['customData']:
+                        # WTF, it wasn't deleted?
+                        self.l_info("load_hubs","customData['hubs'] was not deleted? {0}".format(self.polyConfig))
                     # Need to generate new profile
+                    self.l_info("load_hubs","Building profile since data was migrated to external file.")
                     self.build_profile()
             else:
                 self.hubs = load_hubs_file(LOGGER)
+                # Temp test to put them back...
+                hdata = dict()
+                for hubs in self.hubs:
+                    hdata[hub['address']] = hub
+                self.polyConfig['customData']['hubs'] = hdata
+                self.saveCustomData(self.polyConfig['customData'])
+                
 
         # Always clear it so the default value shows for the user.
         self.addCustomParam({param_name: 0})
