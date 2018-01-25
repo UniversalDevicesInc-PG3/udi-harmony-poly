@@ -10,4 +10,4 @@ install:
 
 script:
     - ./harmony_hub.py
-    - xmllint --noute profile/*/*.xml
+    - xmllint --nooute profile/*/*.xml
