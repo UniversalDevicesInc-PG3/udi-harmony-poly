@@ -287,8 +287,8 @@ class HarmonyController(polyinterface.Controller):
                     else:
                         self.l_info("load_hubs","customData['hubs'] was deleted".format(self.polyConfig))
                     # Need to generate new profile
-                    self.l_info("load_hubs","Building profile since data was migrated to external file.")
-                    #self.build_profile()
+                    self.l_info("load_hubs","Profile should be rebuilt since data was migrated to external file.")
+                    self.setDriver('GV7', 10)
             else:
                 self.hubs = load_hubs_file(LOGGER)
                 # Temp test to put them back...
