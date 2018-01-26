@@ -109,17 +109,15 @@ class HarmonyController(polyinterface.Controller):
         self.l_debug("start","GV9={0} activity_method={1}".format(val,self.activity_method))
 
         # New vesions need to force an update
-        cdata = self.polyConfig['customData']
-        if not 'cver' in cdata:
-            cdata['cver'] = 1
-        self.l_debug("start","cver={0}".format(cdata['cver']))
-        if int(cdata['cver']) < 2:
-            self.l_debug("start","updating myself since cver {0} < 2".format(cdata['cver']))
+        if not 'cver' in self.polyConfig['customData']:
+            self.polyConfig['customData']['cver'] = 1
+        self.l_debug("start","cver={0}".format(self.polyConfig['customData']['cver']))
+        if int(self.polyConfig['customData']['cver']) < 2:
+            self.l_debug("start","updating myself since cver {0} < 2".format(self.polyConfig['customData']['cver']))
             # Force an update.
             self.addNode(self,update=True)
-            cdata['cver'] = 2
-            self.saveCustomData(cdata)
-
+            self.polyConfig['customData']['cver'] = 3
+            self.saveCustomData(self.polyConfig['customData'])
         #
         # Add Hubs from the config
         #
@@ -138,6 +136,7 @@ class HarmonyController(polyinterface.Controller):
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
             self.discover()
+        self.l_info("start","done")
 
     def shortPoll(self):
         #self.l_debug('shortPoll','...')
@@ -272,25 +271,24 @@ class HarmonyController(polyinterface.Controller):
             # If hubs exists in the customData, convert to .hubs list and save the json
             if 'hubs' in self.polyConfig['customData']:
                 # Turn customData hubs hash into a list...
-                cdata = self.polyConfig['customData']
-                self.l_info("load_hubs","Converting hubs from Polyglot DB to local file for {0}".format(cdata))
-                # From: cdata['hubs'][address] = {'name': name, 'host': host, 'port': port}
-                for address in cdata['hubs']:
-                    hub_c = deepcopy(cdata['hubs'][address])
+                self.l_info("load_hubs","Converting hubs from Polyglot DB to local file for {0}".format(self.polyConfig['customData']))
+                # From: self.polyConfig['customData']['hubs'][address] = {'name': name, 'host': host, 'port': port}
+                for address in self.polyConfig['customData']['hubs']:
+                    hub_c = deepcopy(self.polyConfig['customData']['hubs'][address])
                     hub_c['address'] = address
                     self.hubs.append(hub_c)
                 # Save the new json
                 if self.save_hubs():
-                    del cdata['hubs']
-                    self.saveCustomData(cdata)
+                    del self.polyConfig['customData']['hubs']
+                    self.saveCustomData(self.polyConfig['customData'])
                     if 'hubs' in self.polyConfig['customData']:
                         # WTF, it wasn't deleted?
                         self.l_error("load_hubs","customData['hubs'] was not deleted? {0}".format(self.polyConfig))
                     else:
                         self.l_info("load_hubs","customData['hubs'] was deleted".format(self.polyConfig))
                     # Need to generate new profile
-                    self.l_info("load_hubs","Building profile since data was migrated to external file.")
-                    self.build_profile()
+                    self.l_info("load_hubs","Profile should be rebuilt since data was migrated to external file.")
+                    self.setDriver('GV7', 10)
             else:
                 self.hubs = load_hubs_file(LOGGER)
                 # Temp test to put them back...
@@ -299,6 +297,7 @@ class HarmonyController(polyinterface.Controller):
                 #    hdata[hub['address']] = hub
                 #self.polyConfig['customData']['hubs'] = hdata
                 #self.saveCustomData(self.polyConfig['customData'])
+                #self.l_info("load_hubs","Force adding back customData['hubs'] {0}".format(self.polyConfig))
                 
 
         # Always clear it so the default value shows for the user.
