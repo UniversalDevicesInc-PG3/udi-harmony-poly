@@ -118,7 +118,6 @@ class HarmonyController(polyinterface.Controller):
             self.addNode(self,update=True)
             self.polyConfig['customData']['cver'] = 3
             self.saveCustomData(self.polyConfig['customData'])
-
         #
         # Add Hubs from the config
         #
@@ -289,7 +288,7 @@ class HarmonyController(polyinterface.Controller):
                         self.l_info("load_hubs","customData['hubs'] was deleted".format(self.polyConfig))
                     # Need to generate new profile
                     self.l_info("load_hubs","Building profile since data was migrated to external file.")
-                    self.build_profile()
+                    #self.build_profile()
             else:
                 self.hubs = load_hubs_file(LOGGER)
                 # Temp test to put them back...
