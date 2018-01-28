@@ -4,6 +4,10 @@ language:
 python:
     - '3.6'
 
-script:
-    - ./harmony_hub.py
+install:
+    - pip install -r requirements.txt
+    - sudo apt-get install libxml2-utils libxml2-dev
 
+script:
+    - xmllint --noout profile/*/*.xml
+    - ./harmony_hub.py

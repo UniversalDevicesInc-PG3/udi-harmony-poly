@@ -120,6 +120,8 @@ Each harmony hub device will have a node.
 
 # Release Notes
 
+- 2.1.3 01/25/2018
+   - Remove auto-rebuilding of profile since it was killing the polyglot mqtt processs, which was causing DB updates to be lost.  Will re-enable when we figure out what the issue is.
 - 2.1.1 01/24/2018
    - Last minute change in 2.1.0 caused profile.zip to no longer be written out.
    - If you already installed 2.1.0 please run build profile again, and reboot
