@@ -15,21 +15,13 @@ import polyinterface
 import json,re,time,sys,os.path,yaml,logging,json
 from traceback import format_exception
 from copy import deepcopy
+from threading import Thread
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_funcs import id_to_address,get_valid_node_name,long2ip,get_server_data,load_hubs_file,save_hubs_file
 from write_profile import write_profile
 
 LOGGER = polyinterface.LOGGER
 CONFIG = "config.yaml"
-
-# Turn on more logging for now.
-# TODO: Make this a new GV or use current logging GV?
-logging.getLogger('sleekxmpp').setLevel(logging.INFO)
-logging.getLogger('requests').setLevel(logging.INFO)
-logging.getLogger('urllib3').setLevel(logging.INFO)
-logging.getLogger('pyharmony').setLevel(logging.INFO)
-
-
 
 class HarmonyController(polyinterface.Controller):
     """
@@ -68,7 +60,10 @@ class HarmonyController(polyinterface.Controller):
         self.name = 'HarmonyHub Controller'
         self.address = 'harmonyctrl'
         self.primary = self.address
-        
+        # These start in threads cause they take a while
+        self.discover_thread = None
+        self.profile_thread = None
+
     def start(self):
         """
         Optional.
@@ -82,6 +77,9 @@ class HarmonyController(polyinterface.Controller):
         self.l_info('start','Starting Config=%s' % (self.polyConfig))
         self.setDriver('GV1', self.serverdata['version_major'])
         self.setDriver('GV2', self.serverdata['version_minor'])
+        # Show these for now
+        self.l_debug("start","GV4={0} GV8={1}".format(self.getDriver('GV4'),self.getDriver('GV8')))
+        self.set_debug_level(self.getDriver('GV4'))
         # Set Profile Status as Up To Date, if it's status 6=ISY Reboot Required
         val = self.getDriver('GV7')
         if val is None or int(val) == 6 or int(val) == 0:
@@ -104,6 +102,7 @@ class HarmonyController(polyinterface.Controller):
         val = self.getDriver('GV9')
         if val is None:
             self.activity_method = 2 # The default
+            self.setDriver('GV9',self.activity_method)
         else:
             self.activity_method = int(val)
         self.l_debug("start","GV9={0} activity_method={1}".format(val,self.activity_method))
@@ -123,7 +122,6 @@ class HarmonyController(polyinterface.Controller):
         #
         self.l_info("start","Adding known hubs...")
         self._set_num_hubs(0)
-        self.reportDrivers() # Removed for now since it was causing issues.
         #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
         if self.polyConfig['nodes']:
             # Load the config info about the hubs.
@@ -140,6 +138,19 @@ class HarmonyController(polyinterface.Controller):
 
     def shortPoll(self):
         #self.l_debug('shortPoll','...')
+        if self.discover_thread is not None:
+            if self.discover_thread.isAlive():
+                self.l_debug('shortPoll','discover thread still running...')
+            else:
+                self.l_debug('shortPoll','discover thread is done...')
+                self.discover_thread = None
+        if self.profile_thread is not None:
+            if self.profile_thread.isAlive():
+                self.l_debug('shortPoll','profile thread still running...')
+            else:
+                self.l_debug('shortPoll','profile thread is done...')
+                self.profile_thread = None
+                
         for node in self.nodes:
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].shortPoll()
@@ -158,7 +169,13 @@ class HarmonyController(polyinterface.Controller):
                 self.nodes[node].query()
 
     def discover(self):
-        hub_list = list()
+        """
+        Start the discover in a thread so we don't cause timeouts :(
+        """
+        self.discover_thread = Thread(target=self._discover)
+        self.discover_thread.start()
+
+    def _discover(self):
         # Clear the hubs now so we clear some that may have been improperly added.
         self.clear_hubs()
         #
@@ -206,7 +223,7 @@ class HarmonyController(polyinterface.Controller):
                 except:
                     err = sys.exc_info()[0]
                     self.l_error('discover','failed to parse cfg={0} Error: {1}'.format(cfg,err))
-                # Check that name and hos are defined.
+                # Check that name and host are defined.
                 addit = True
                 if not 'name' in cfgd:
                     self.l_error('discover','No name in customParam {0} value={1}'.format(param,cfg))
@@ -215,13 +232,13 @@ class HarmonyController(polyinterface.Controller):
                     self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
                     addit = False
                 if addit:
-                    hub_list.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
+                    self.hubs.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
                     
         #
         # Next the discovered ones
         #
         for config in discover_result:
-            hub_list.append(
+            self.hubs.append(
                 {
                     'address': 'h'+id_to_address(config['uuid'],13),
                     'name':    get_valid_node_name(config['friendlyName']),
@@ -231,15 +248,16 @@ class HarmonyController(polyinterface.Controller):
                 }
             )
         #
-        # Now really add them.
-        #
-        for cnode in hub_list:
-            self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'])
-        self.save_hubs()
-        #
         # Build the profile
-        #
-        return self.build_profile()
+        # It needs the hub_list set, so we will reset it later.
+        if self._build_profile():
+            #
+            # Now really add them.
+            hl = self.hubs
+            self.clear_hubs()
+            for cnode in hl:
+                self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'])
+            self.save_hubs()
 
     def add_hub(self,address,name,host,port,update=True):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} update={4}".format(address,name,host,port,update))
@@ -288,7 +306,7 @@ class HarmonyController(polyinterface.Controller):
                         self.l_info("load_hubs","customData['hubs'] was deleted".format(self.polyConfig))
                     # Need to generate new profile
                     self.l_info("load_hubs","Building profile since data was migrated to external file.")
-                    #self.build_profile()
+                    self.build_profile()
             else:
                 self.hubs = load_hubs_file(LOGGER)
                 # Temp test to put them back...
@@ -336,7 +354,8 @@ class HarmonyController(polyinterface.Controller):
                 self.l_error('load_config','failed to open cfg={0} Error: {1}'.format(CONFIG,err_str))
                 return False
             try:
-                self.harmony_config = yaml.load(config_h)
+                harmony_config = yaml.load(config_h)
+                self.harmony_config = harmony_config
             except:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
@@ -377,6 +396,13 @@ class HarmonyController(polyinterface.Controller):
         
     def build_profile(self):
         """
+        Start the build_profile in a thread so we don't cause timeouts :(
+        """
+        self.profile_thread = Thread(target=self._build_profile)
+        self.profile_thread.start()
+
+    def _build_profile(self):
+        """
         Build the profile from our internal list of hubs
         """
         self.setDriver('GV7', 4)
@@ -386,7 +412,6 @@ class HarmonyController(polyinterface.Controller):
         except (Exception) as err:
             self.l_error('build_profile','write_profile failed: {}'.format(err), exc_info=True)
             self.setDriver('GV7', 7)
-
         # Reload the config we just generated.
         self.load_config()
         #
@@ -409,6 +434,29 @@ class HarmonyController(polyinterface.Controller):
         # TODO: which is on the enhancement list.
         self.setDriver('GV7', 6)
         return True
+
+    def set_all_logs(self,level):
+        LOGGER.setLevel(level)
+        logging.getLogger('sleekxmpp').setLevel(level)
+        logging.getLogger('requests').setLevel(level)
+        logging.getLogger('urllib3').setLevel(level)
+        logging.getLogger('pyharmony').setLevel(level)
+        
+    def set_debug_level(self,level):
+        self.setDriver('GV4', level)
+        # 0=All 10=Debug are the same because 0 (NOTSET) doesn't show everything.
+        if level == 0 or level == 10: 
+            self.set_all_logs(logging.DEBUG)
+        elif level == 20:
+            self.set_all_logs(logging.INFO)
+        elif level == 30:
+            self.set_all_logs(logging.WARNING)
+        elif level == 40:
+            self.set_all_logs(logging.ERROR)
+        elif level == 50:
+            self.set_all_logs(logging.CRITICAL)
+        else:
+            self.l_error("set_debug_level","Unknown level {0}".format(level))
         
     def _cmd_discover(self, command):
         self.discover()
@@ -424,7 +472,7 @@ class HarmonyController(polyinterface.Controller):
     def _cmd_set_debug_mode(self,command):
         val = int(command.get('value'))
         self.l_info("_cmd_set_debug_mode",val)
-        self.setDriver('GV4', val)
+        self.set_debug_level(val)
         
     def _cmd_set_discover_mode(self,command):
         val = int(command.get('value'))

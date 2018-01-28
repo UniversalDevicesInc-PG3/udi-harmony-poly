@@ -117,7 +117,7 @@ def write_profile(logger,hub_list):
     config_data['info']['functions'] = list()
     warn_string_1 = ""
     if len(hub_list) == 0:
-        logger.warning("{0} Hub list is empty?".format(pfx))
+        logger.error("{0} Hub list is empty?".format(pfx))
     for ahub in hub_list:
         #
         # Process this hub.
@@ -239,7 +239,7 @@ def write_profile(logger,hub_list):
     outfile.close()
     
     with open(VERSION_FILE, 'w') as outfile:
-        outfile.write(sd['version'])
+        outfile.write(sd['profile_version'])
     outfile.close()
 
     write_profile_zip(logger)

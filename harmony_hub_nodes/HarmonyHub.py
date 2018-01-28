@@ -1,6 +1,7 @@
 
 import polyinterface,sys,logging
 from traceback import format_exception
+from threading import Thread,Event
 from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
 from harmony_hub_funcs import ip2long,long2ip,get_valid_node_name
 from pyharmony import client as harmony_client
@@ -44,6 +45,9 @@ class HarmonyHub(polyinterface.Node):
         self.port   = port
         self.client = None
         self.current_activity = -2
+        self.thread = None
+        self.client_status = None
+        self.event  = None
         # Can't poll until start runs.
         self.do_poll = False
         self.l_info("init","hub '%s' '%s' %s" % (address, name, host))
@@ -67,11 +71,7 @@ class HarmonyHub(polyinterface.Node):
         #
         # Connect to the hub
         #
-        self._get_client()
-        #
-        # Setup activities and devices
-        #
-        self.init_activities_and_devices()
+        self.get_client()
         #
         # Call query to initialize and pull the info from the hub.
         #
@@ -81,8 +81,8 @@ class HarmonyHub(polyinterface.Node):
         
     def shortPoll(self):
         if self.check_client():
-            if self.parent.activity_method == 1:
-                # Old poll method
+            # Query in poll mode, or if we haven't set the current_activity yet (which happens on startup)
+            if self.parent.activity_method == 1 or self.current_activity == -2:
                 self._get_current_activity()
         else:
             return False
@@ -97,26 +97,13 @@ class HarmonyHub(polyinterface.Node):
         there is a need.
         """
         self.l_debug('query','...')
-        self._get_current_activity()
+        if self.check_client():
+            self._get_current_activity()
         self.reportDrivers()
 
     def stop(self):
         return self._close_client()
 
-    def check_client(self):
-        if self.client.state.current_state() != 'connected':
-            self.l_error("check_client","Client no longer connected. client.state={0}".format(self.client.state.current_state()))
-            self._close_client()
-        # If the activity method change, we need to restart the client for the register callback.
-        if self.last_activity_method != self.parent.activity_method and (self.last_activity_method == 2 or self.parent.activity_method == 2):
-            self.st = 0
-        # If we had a connection issue previously, try to fix it.
-        if self.st == 0:
-            self.l_debug("check_client","Calling get_client st=%d" % (self.st))
-            if not self._get_client():
-                return False
-        return True
-        
     def _set_current_activity(self, id, force=False):
         """ 
         Update Polyglot with the current activity.
@@ -128,6 +115,8 @@ class HarmonyHub(polyinterface.Node):
         self.current_activity = val
         index = self._get_activity_index(val)
         self.l_info("_set_current_activity","activity=%d, index=%d" % (self.current_activity,index))
+        # Set to -1 to force a change.
+        self.setDriver('GV3', -1)
         self.setDriver('GV3', index)
         # Make the activity node current, unless it's -1 which is poweroff
         ignore_id=False
@@ -137,6 +126,15 @@ class HarmonyHub(polyinterface.Node):
         # Update all the other activities to not be the current.
         self._set_all_activities(0,ignore_id=ignore_id)
         return True
+
+    def get_client(self):
+        """
+        Start the client in a thread so if it dies, we don't die.
+        """
+        self.client_status = "init"
+        self.event = Event()
+        self.thread = Thread(target=self._get_client)
+        return self.thread.start()
 
     def _get_client(self):
         self.l_info("get_client","Initializing PyHarmony Client")
@@ -153,11 +151,52 @@ class HarmonyHub(polyinterface.Node):
             self.l_error("get_client",err_str)
             self._set_st(0)
             self._close_client()
+            self.client_status = "failed"
             return False
         self._set_st(1)
+        # Setup activities and devices
+        self.init_activities_and_devices()
+        self._get_current_activity()
         self.l_info("get_client","PyHarmony client= " + str(self.client))
-        return True
+        self.client_status = True
+        # Hang around until asked to quit
+        self.event.wait()
 
+    def check_client(self):
+        # Thread is none before we try to start it.
+        start_client = False
+        if self.thread is None:
+            self.l_info("check_client","Waiting for client thread to be created..")
+            return False
+        else:
+            # Then client_status will be True when client is ready
+            if self.client_status is True:
+                if self.thread.isAlive():
+                    if self.client.state.current_state() == 'connected':
+                        # All seems good.
+                        # If activity method changed from or to a 2 then we need to reconnect to register or unregister the callback
+                        if self.last_activity_method != self.parent.activity_method and (self.last_activity_method == 2 or self.parent.activity_method == 2):
+                            self.l_info("check_client","Activity method changed from {0} to {1}, need to restart client".format(self.last_activity_method,self.parent.activity_method))
+                            self._set_st(0)
+                        else:
+                            return True
+                    else:
+                        self.l_error("check_client","Client no longer connected. client.state={0}".format(self.client.state.current_state()))
+                        self._close_client()
+                else:
+                    # Need to restart the thread
+                    self.l_error("check_client","Thread is dead, need to restart")
+                    self._set_st(0)
+            else:
+                self.l_info("check_client","Waiting for client startup to complete, status = {0}..".format(self.client_status))
+                return False
+        # If we had a connection issue previously, try to fix it.
+        if self.st == 0:
+            self.l_debug("check_client","Calling get_client st=%d" % (self.st))
+            if not self.get_client():
+                return False
+        return True
+        
     def _close_client(self):
         if self.client is not None:
             try:
@@ -170,6 +209,11 @@ class HarmonyHub(polyinterface.Node):
             finally:
                 self.client = None
                 self._set_st(0)
+        else:
+            self._set_st(0)
+        # Tells the thread to finish
+        if self.event is not None:
+            self.event.set()
         return True
         
     def _get_current_activity(self):

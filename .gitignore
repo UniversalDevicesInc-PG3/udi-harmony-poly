@@ -13,6 +13,8 @@ profile.zip
 profile/version.txt
 profile/*/custom*.xml
 profile/nls/en_us.txt
+*.yaml
+hubs.json
 
 # C extensions
 *.so
@@ -79,9 +81,5 @@ target/
 *~
 
 .AppleDouble
+.DS_Store
 *.sublime-*
-
-# Extra yaml files
-*.yaml
-!config_template.yaml
-
