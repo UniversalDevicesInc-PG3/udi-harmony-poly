@@ -118,8 +118,19 @@ Each harmony hub device will have a node.
    * https://linuxconfig.org/raspbian-gnu-linux-upgrade-from-jessie-to-raspbian-stretch-9
 1. This has only been tested with ISY 5.0.11B so it is not garunteed to work with any other version.
 
+# Upgrading
+
+Open the Polyglot web page, go to nodeserver store and click "Update" for "HarmonyHub".
+
+For Polyglot 2.0.35, hit "Cancel" in the update window so the profile will not be updated and ISY rebooted.  The install procedure will properly handle this for you.  This will change with 2.0.36, for that version you will always say "No" and let the install procedure handle it for you as well.
+
+The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
+
 # Release Notes
 
+- 2.1.4 01/27/2018
+   - All pyharmony interface code is run in a seperate thread to avoid timeouts in Polyglot
+   - Fixed Debug mode so it actually works.
 - 2.1.3 01/25/2018
    - Remove auto-rebuilding of profile since it was killing the polyglot mqtt processs, which was causing DB updates to be lost.  Will re-enable when we figure out what the issue is.
 - 2.1.1 01/24/2018
