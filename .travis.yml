@@ -9,5 +9,5 @@ install:
 
 script:
     - xmllint --noout profile/*/*.xml
-    - install.sh
+    - ./install.sh
     - ./harmony_hub.py
