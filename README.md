@@ -130,6 +130,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 
+- 2.1.5 01/30/2018
+   - Fix call to write_profile.py in install.sh.  No need to upgrade if you are on 2.1.4. This only affects new installs.
 - 2.1.4 01/27/2018
    - All pyharmony interface code is run in a seperate thread to avoid timeouts in Polyglot
    - Fixed Debug mode so it actually works.
