@@ -72,7 +72,7 @@ class HarmonyActivity(polyinterface.Node):
         """
         self.l_debug("_cmd_on","")
         # Push it to the Hub
-        ret = self.primary.start_activity(id=self.number)
+        ret = self.parent.start_activity(id=self.number)
         self.l_debug("_cmd_on","ret=%s" % (str(ret)))
         if ret:
             self._set_st(1)
@@ -84,7 +84,7 @@ class HarmonyActivity(polyinterface.Node):
         """
         self.l_debug("_cmd_off","")
         # Push it to the Hub
-        ret = self.primary.end_activity(id=self.number)
+        ret = self.parent.end_activity(id=self.number)
         self.l_debug("_cmd_off","ret=%s" % (str(ret)))
         if ret:
             self._set_st(0)
