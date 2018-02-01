@@ -33,7 +33,8 @@ class HarmonyActivity(polyinterface.Node):
         :param name: This nodes name
         """
         # The id (node_def_id) is address because each activiy has a unique nodedef in the profile.
-        # The id using the original case of the string
+        # The id using the original case of the string.
+        self.number = address
         address = "a" + address
         # But here we pass the lowercase, cause ISY doesn't allow the upper case!
         super(HarmonyActivity, self).__init__(parent.controller, parent.address, address.lower(), name)
