@@ -130,6 +130,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 
+- 2.1.5 02/01/2018
+   - Fixed Start/End on an activity node https://github.com/jimboca/udi-harmony-poly/issues/7
 - 2.1.4 01/27/2018
    - All pyharmony interface code is run in a seperate thread to avoid timeouts in Polyglot
    - Fixed Debug mode so it actually works.
