@@ -132,6 +132,10 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 [![Build Status](https://travis-ci.org/jimboca/udi-harmony-poly.svg?branch=master)](https://travis-ci.org/jimboca/udi-harmony-poly)
 
+- 2.1.7 02/03/2018
+   - Properly fixed escaped / in Harmony Function so it doesn't break other escaped functions.
+   - Fix error message for non-existant profile on initial install
+   - Allow using latest pyharmony 1.0.20
 - 2.1.6 02/01/2018
    - Fixed Start/End on an activity node https://github.com/jimboca/udi-harmony-poly/issues/7
 - 2.1.5 01/30/2018
