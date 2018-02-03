@@ -185,24 +185,28 @@ def write_profile(logger,hub_list):
             #
             for cg in d['controlGroup']:
                 for f in cg['function']:
-                    a = f['action']
-                    ay = yaml.load(a.replace('\\',''))
-                    bname = f['name']
-                    if not bname in buttons:
-                        cb = bi
-                        buttons[bname] = bi
-                        bi += 1
-                        config_data['info']['functions'].append({'label':str(f['label']),'name':str(f['name']),'command':{str(d['id']):str(ay['command'])}});
+                    a = f['action'].replace('\\/','/')
+                    try:
+                        ay = yaml.load(a)
+                    except (Exception) as err:
+                        logger.error('{0} failed to parse string: {1}'.format(pfx,err))
                     else:
-                        cb = buttons[bname]
-                        config_data['info']['functions'][cb]['command'][str(d['id'])] = ay['command']
-                    logger.debug("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, cb, f['name'], f['label'], ay['command']))
+                        bname = f['name']
+                        if not bname in buttons:
+                            cb = bi
+                            buttons[bname] = bi
+                            bi += 1
+                            config_data['info']['functions'].append({'label':str(f['label']),'name':str(f['name']),'command':{str(d['id']):str(ay['command'])}});
+                        else:
+                            cb = buttons[bname]
+                            config_data['info']['functions'][cb]['command'][str(d['id'])] = ay['command']
+                        logger.debug("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, cb, f['name'], f['label'], ay['command']))
 
-                    if bname != f['name']:
-                        warn_string_1 += " device %s has button with label=%s, command=%s\n" % (d['label'],f['label'],ay['command'])
-                    #nls.write("# Button name: %s, label: %s\n" % (f['name'], f['label']))
-                    # This is the list of button numbers in this device.
-                    subset.append(cb)
+                        if bname != f['name']:
+                            warn_string_1 += " device %s has button with label=%s, command=%s\n" % (d['label'],f['label'],ay['command'])
+                        #nls.write("# Button name: %s, label: %s\n" % (f['name'], f['label']))
+                        # This is the list of button numbers in this device.
+                        subset.append(cb)
             #
             # Turn the list of button numbers, into a compacted subset string for the editor.
             #
@@ -283,8 +287,10 @@ if __name__ == "__main__":
                 local_version = vfile.readline()
                 local_version = local_version.rstrip()
                 vfile.close()
+        except (FileNotFoundError):
+            pass
         except (Exception) as err:
-            logger.error('{0} failed to read local version from {0}: {1}'.format(pfx,VERSION_FILE,err), exc_info=True)
+            logger.error('{0} failed to read local version from {1}: {2}'.format(pfx,VERSION_FILE,err), exc_info=True)
         if local_version == sd['profile_version']:
             logger.info('{0} Not Generating new profile since local version {1} is the same current {2}'.format(pfx,local_version,sd['profile_version']))
         else:
