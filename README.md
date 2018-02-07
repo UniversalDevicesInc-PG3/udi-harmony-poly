@@ -116,7 +116,7 @@ Each harmony hub device will have a node.
   Stretch, but I would recommend just reimaging the SD card.  Some helpful links:
    * https://www.raspberrypi.org/blog/raspbian-stretch/
    * https://linuxconfig.org/raspbian-gnu-linux-upgrade-from-jessie-to-raspbian-stretch-9
-1. This has only been tested with ISY 5.0.11B so it is not garunteed to work with any other version.
+1. This has only been tested with ISY 5.0.11 so it is not garunteed to work with any other version.
 
 # Upgrading
 
