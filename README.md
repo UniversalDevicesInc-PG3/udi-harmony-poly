@@ -124,12 +124,22 @@ Open the Polyglot web page, go to nodeserver store and click "Update" for "Harmo
 
 For Polyglot 2.0.35, hit "Cancel" in the update window so the profile will not be updated and ISY rebooted.  The install procedure will properly handle this for you.  This will change with 2.0.36, for that version you will always say "No" and let the install procedure handle it for you as well.
 
+Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard and select Control -> Restart, then watch the log to make sure everything goes well.
+
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
 # Release Notes
 
-- 2.1.5 02/01/2018
+[![Build Status](https://travis-ci.org/jimboca/udi-harmony-poly.svg?branch=master)](https://travis-ci.org/jimboca/udi-harmony-poly)
+
+- 2.1.7 02/03/2018
+   - Properly fixed escaped / in Harmony Function so it doesn't break other escaped functions.
+   - Fix error message for non-existant profile on initial install
+   - Allow using latest pyharmony 1.0.20
+- 2.1.6 02/01/2018
    - Fixed Start/End on an activity node https://github.com/jimboca/udi-harmony-poly/issues/7
+- 2.1.5 01/30/2018
+   - Fix call to write_profile.py in install.sh.  No need to upgrade if you are on 2.1.4. This only affects new installs.
 - 2.1.4 01/27/2018
    - All pyharmony interface code is run in a seperate thread to avoid timeouts in Polyglot
    - Fixed Debug mode so it actually works.
