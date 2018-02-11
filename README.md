@@ -132,6 +132,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 [![Build Status](https://travis-ci.org/jimboca/udi-harmony-poly.svg?branch=master)](https://travis-ci.org/jimboca/udi-harmony-poly)
 
+- 2.1.8 02/11/2018
+   - Minor profile fixes
 - 2.1.7 02/03/2018
    - Properly fixed escaped / in Harmony Function so it doesn't break other escaped functions.
    - Fix error message for non-existant profile on initial install

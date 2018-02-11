@@ -3,7 +3,7 @@
   <nodeDef id="HarmonyController" nodeType="139" nls="HHCNTL">
     <sts>
       <!-- Device Status -->
-      <st id="ST" editor="INTEGER" />
+      <st id="ST" editor="BOOL" />
       <!-- Version Major -->
       <st id="GV1" editor="FLOAT" />
       <!-- Version Minor -->
@@ -53,7 +53,7 @@
   </nodeDef>
   <nodeDef id="HubDefault" nodeType="139" nls="HARMONYHUB">
     <sts>
-      <st id="ST" editor="HUBST" />
+      <st id="ST" editor="BOOL" />
       <st id="GV3" editor="ActDefault" />
     </sts>
     <cmds>

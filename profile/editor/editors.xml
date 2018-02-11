@@ -1,10 +1,10 @@
 
 <editors>
 
-  <editor id="HUBST">
-    <range uom="25" subset="0,1" nls="HUBST"/>
+  <editor id="BOOL">
+    <range uom="2" subset="0,1"/>
   </editor>
-  
+
   <editor id="ACTST">
     <range uom="25" subset="0,1" nls="ACTST"/>
   </editor>

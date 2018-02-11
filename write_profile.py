@@ -21,7 +21,7 @@ VERSION_FILE = "profile/version.txt"
 NODEDEF_TMPL_ACTIVITY = """
   <nodeDef id="%s" nodeType="139" nls="%s">
     <sts>
-      <st id="ST" editor="HUBST" />
+      <st id="ST" editor="BOOL" />
       <st id="GV3" editor="%s" />
     </sts>
     <cmds>
