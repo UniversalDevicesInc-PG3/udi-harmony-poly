@@ -78,13 +78,13 @@ class HarmonyDevice(polyinterface.Node):
 
     def l_info(self, name, string):
         LOGGER.info("Device:%s:%s:%s: %s" %  (self.id,self.name,name,string))
-        
+
     def l_error(self, name, string):
         LOGGER.error("Device:%s:%s:%s: %s" % (self.id,self.name,name,string))
-        
+
     def l_warning(self, name, string):
         LOGGER.warning("Device:%s:%s:%s: %s" % (self.id,self.name,name,string))
-        
+
     def l_debug(self, name, string):
         LOGGER.debug("Device:%s:%s:%s: %s" % (self.id,self.name,name,string))
 
@@ -117,6 +117,9 @@ class HarmonyDevice(polyinterface.Node):
     def _send_command_by_index(self,index):
         self.l_debug("_send_command_by_index","index=%d" % (index))
         name = self._get_button_command(index)
+        if name is False:
+            self.l_error("_send_command_by_index: No name for index %d" % (index))
+            return False
         self.l_debug("_send_command_by_index","index=%d, name=%s" % (index,name))
         return self._send_command(name)
 
@@ -134,23 +137,23 @@ class HarmonyDevice(polyinterface.Node):
         return ret
 
     def _cmd_set_button(self, command):
-        """ 
+        """
         This runs when ISY calls set button which passes the button index
         """
         index = int(command.get('value'))
         self.l_debug("_cmd_set_button","index=%d" % (index))
         return self._send_command_by_index(index)
-    
+
     def _cmd_don(self, command):
-        """ 
+        """
         This runs when ISY calls set button which passes the button index
         """
         self.l_debug("_cmd_don","")
         # TODO: If no PowerOn command, do PowerToggle
         return self._send_command('PowerOn')
-    
+
     def _cmd_dof(self, command):
-        """ 
+        """
         This runs when ISY calls set button which passes the button index
         """
         self.l_debug("_cmd_dof","")

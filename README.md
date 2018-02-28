@@ -5,7 +5,7 @@
 
 This is the Harmony Hub Poly for the [Universal Devices ISY994i](https://www.universal-devices.com/residential/ISY) [Polyglot interface](http://www.universal-devices.com/developers/polyglot/docs/) with  [Polyglot V2](https://github.com/Einstein42/udi-polyglotv2)
 (c) JimBoCA aka Jim Searle
-MIT license. 
+MIT license.
 
 This node server is intended to support the [Logitech Harmony Hub](http://www.logitech.com/en-us/product/harmony-hub) using the [pyharmony Python Library](https://pypi.python.org/pypi/pyharmony).
 
@@ -133,6 +133,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 
+- 2.1.9 02/27/2018
+  - Print error for unknown command name instead of crashing
 - 2.1.8 02/11/2018
    - Minor profile fixes
 - 2.1.7 02/03/2018
