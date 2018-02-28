@@ -133,8 +133,10 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 
+- 2.1.10 02/28/2018
+  - Fix syntax error created in previous release
 - 2.1.9 02/27/2018
-  - Print error for unknown command name instead of crashing
+    - Print error for unknown command name instead of crashing
 - 2.1.8 02/11/2018
    - Minor profile fixes
 - 2.1.7 02/03/2018

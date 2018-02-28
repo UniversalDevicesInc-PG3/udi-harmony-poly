@@ -118,7 +118,7 @@ class HarmonyDevice(polyinterface.Node):
         self.l_debug("_send_command_by_index","index=%d" % (index))
         name = self._get_button_command(index)
         if name is False:
-            self.l_error("_send_command_by_index: No name for index %d" % (index))
+            self.l_error("_send_command_by_index","No name for index %d" % (index))
             return False
         self.l_debug("_send_command_by_index","index=%d, name=%s" % (index,name))
         return self._send_command(name)
