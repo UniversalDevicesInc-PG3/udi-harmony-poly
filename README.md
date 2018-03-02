@@ -133,6 +133,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 
+- 2.1.11 03/01/2018
+  - Trap change channel timouts
 - 2.1.10 02/28/2018
   - Fix syntax error created in previous release
 - 2.1.9 02/27/2018
