@@ -133,8 +133,12 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 
+- 2.1.12 05/06/2018
+  - Fix crashing when hub timeout occurs since PyHarmony now traps it corrrect. https://github.com/jimboca/udi-harmony-poly/issues/12
+  - Initialize ST properly on startup and restart https://github.com/jimboca/udi-harmony-poly/issues/13
+  - Show hub name for activity in log https://github.com/jimboca/udi-harmony-poly/issues/10
 - 2.1.11 03/01/2018
-  - Trap change channel timouts
+  - Trap change channel timeouts
 - 2.1.10 02/28/2018
   - Fix syntax error created in previous release
 - 2.1.9 02/27/2018

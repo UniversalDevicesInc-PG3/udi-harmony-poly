@@ -34,6 +34,7 @@ class HarmonyActivity(polyinterface.Node):
         """
         # The id (node_def_id) is address because each activiy has a unique nodedef in the profile.
         # The id using the original case of the string.
+        self.parent_obj = parent
         self.number = address
         address = "a" + address
         # But here we pass the lowercase, cause ISY doesn't allow the upper case!
@@ -42,7 +43,7 @@ class HarmonyActivity(polyinterface.Node):
         #self.address = address
         # Only Hub devices are polled.
         self.do_poll     = False
-        # Add myself to the parents list of 
+        # Add myself to the parents list of
 
     def start(self):
         """
@@ -51,7 +52,7 @@ class HarmonyActivity(polyinterface.Node):
         and we get a return result from Polyglot.
         """
         pass
-    
+
     def query(self):
         """
         Called by ISY to report all drivers for this node. This is done in
@@ -65,9 +66,9 @@ class HarmonyActivity(polyinterface.Node):
         self.st = st
         self.setDriver('ST',int(st))
         self.l_debug("_set_st","set=%s, get=%s" % (st,self.getDriver('ST')))
-        
+
     def _cmd_on(self, command):
-        """ 
+        """
         This runs when ISY calls on button
         """
         self.l_debug("_cmd_on","")
@@ -79,7 +80,7 @@ class HarmonyActivity(polyinterface.Node):
         return ret
 
     def _cmd_off(self, command):
-        """ 
+        """
         This runs when ISY calls off/fast off button
         """
         self.l_debug("_cmd_off","")
@@ -91,16 +92,16 @@ class HarmonyActivity(polyinterface.Node):
         return ret
 
     def l_info(self, name, string):
-        LOGGER.info("Activity:%s:%s:%s: %s" %  (self.address,self.name,name,string))
-        
+        LOGGER.info("Activity:%s:%s:%s:%s: %s" %  (self.parent_obj.name,self.address,self.name,name,string))
+
     def l_error(self, name, string):
-        LOGGER.error("Activity:%s:%s:%s: %s" % (self.address,self.name,name,string))
-        
+        LOGGER.error("Activity:%s:%s:%s:%s: %s" % (self.parent_obj.name,self.address,self.name,name,string))
+
     def l_warning(self, name, string):
-        LOGGER.warning("Activity:%s:%s:%s: %s" % (self.address,self.name,name,string))
-        
+        LOGGER.warning("Activity:%s:%s:%s:%s: %s" % (self.parent_obj.name,self.address,self.name,name,string))
+
     def l_debug(self, name, string):
-        LOGGER.debug("Activity:%s:%s:%s: %s" % (self.address,self.name,name,string))
+        LOGGER.debug("Activity:%s:%s:%s:%s: %s" % (self.parent_obj.name,self.address,self.name,name,string))
 
     id = 'HarmonyActivity'
     drivers = [

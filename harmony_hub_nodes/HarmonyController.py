@@ -3,7 +3,7 @@
 #
 # TODO:
 #
-# This is the main Harmony Hub Node Controller  
+# This is the main Harmony Hub Node Controller
 # Add a Configuration Parameter:
 # Key=hub_FamilyRoom
 # Value={ "name": "HarmonyHub FamilyRoom", "host": "192.168.86.82" }
@@ -150,7 +150,7 @@ class HarmonyController(polyinterface.Controller):
             else:
                 self.l_debug('shortPoll','profile thread is done...')
                 self.profile_thread = None
-                
+
         for node in self.nodes:
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].shortPoll()
@@ -160,7 +160,7 @@ class HarmonyController(polyinterface.Controller):
         for node in self.nodes:
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].longPoll()
-                
+
     def query(self):
         self.l_debug('query','...')
         self.reportDrivers()
@@ -233,7 +233,7 @@ class HarmonyController(polyinterface.Controller):
                     addit = False
                 if addit:
                     self.hubs.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
-                    
+
         #
         # Next the discovered ones
         #
@@ -272,10 +272,10 @@ class HarmonyController(polyinterface.Controller):
             self.add_hub(hub['address'], hub['name'], hub['host'], hub['port'], update=False)
 
     """
-    This pulls in the save hub data.  Old versions stored this in the 
+    This pulls in the save hub data.  Old versions stored this in the
     customParams, but since we need it available from install.sh we
     switched to using a local file.
-    """ 
+    """
     def load_hubs(self):
         self.hubs = list()
         # Hack... if customParams has clear_hubs=1 then just clear them :(
@@ -316,7 +316,7 @@ class HarmonyController(polyinterface.Controller):
                 #self.polyConfig['customData']['hubs'] = hdata
                 #self.saveCustomData(self.polyConfig['customData'])
                 #self.l_info("load_hubs","Force adding back customData['hubs'] {0}".format(self.polyConfig))
-                
+
 
         # Always clear it so the default value shows for the user.
         self.addCustomParam({param_name: 0})
@@ -342,7 +342,7 @@ class HarmonyController(polyinterface.Controller):
         # Clear all the saved hub data.
         self._set_num_hubs(0)
         self.hubs = list()
-        
+
     def load_config(self):
         if os.path.exists(CONFIG):
             self.l_info('load_config','Loading Harmony config {}'.format(CONFIG))
@@ -366,7 +366,7 @@ class HarmonyController(polyinterface.Controller):
                 config_h.close()
         else:
             self.l_error('load_config','Harmony config does not exist {}'.format(CONFIG))
-        
+
     def delete(self):
         """
         Example
@@ -384,16 +384,16 @@ class HarmonyController(polyinterface.Controller):
 
     def l_info(self, name, string):
         LOGGER.info("%s:%s: %s" %  (self.id,name,string))
-        
+
     def l_error(self, name, string):
         LOGGER.error("%s:%s: %s" % (self.id,name,string))
-        
+
     def l_warning(self, name, string):
         LOGGER.warning("%s:%s: %s" % (self.id,name,string))
-        
+
     def l_debug(self, name, string):
         LOGGER.debug("%s:%s: %s" % (self.id,name,string))
-        
+
     def build_profile(self):
         """
         Start the build_profile in a thread so we don't cause timeouts :(
@@ -441,11 +441,11 @@ class HarmonyController(polyinterface.Controller):
         logging.getLogger('requests').setLevel(level)
         logging.getLogger('urllib3').setLevel(level)
         logging.getLogger('pyharmony').setLevel(level)
-        
+
     def set_debug_level(self,level):
         self.setDriver('GV4', level)
         # 0=All 10=Debug are the same because 0 (NOTSET) doesn't show everything.
-        if level == 0 or level == 10: 
+        if level == 0 or level == 10:
             self.set_all_logs(logging.DEBUG)
         elif level == 20:
             self.set_all_logs(logging.INFO)
@@ -457,14 +457,14 @@ class HarmonyController(polyinterface.Controller):
             self.set_all_logs(logging.CRITICAL)
         else:
             self.l_error("set_debug_level","Unknown level {0}".format(level))
-        
+
     def _cmd_discover(self, command):
         self.discover()
-        
+
     def _cmd_build_profile(self,command):
         self.l_info("_cmd_build_profile","building...")
         self.build_profile()
-        
+
     def _cmd_install_profile(self,command):
         self.l_info("_cmd_install_profile","installing...")
         self.poly.installprofile()
@@ -473,18 +473,18 @@ class HarmonyController(polyinterface.Controller):
         val = int(command.get('value'))
         self.l_info("_cmd_set_debug_mode",val)
         self.set_debug_level(val)
-        
+
     def _cmd_set_discover_mode(self,command):
         val = int(command.get('value'))
         self.l_info("_cmd_set_discover_mode",val)
         self.setDriver('GV8', val)
-        
+
     def _cmd_set_activity_method(self,command):
         val = int(command.get('value'))
         self.l_info("_cmd_set_activity_method",val)
         self.setDriver('GV9', val)
         self.activity_method = val # The default
-        
+
     def _cmd_set_shortpoll(self,command):
         val = int(command.get('value'))
         self.l_info("_cmd_set_short_poll",val)
@@ -498,7 +498,7 @@ class HarmonyController(polyinterface.Controller):
         self.polyConfig['longPoll'] = val
 
     id = 'HarmonyController'
-    """ 
+    """
        Commands:
     """
     commands = {
@@ -512,11 +512,11 @@ class HarmonyController(polyinterface.Controller):
         'SET_DI_MODE': _cmd_set_discover_mode,
         'SET_ACTIVITY_METHOD': _cmd_set_activity_method
     }
-    """ 
+    """
        Driver Details:
     """
     drivers = [
-        {'driver': 'ST',  'value': 0,  'uom': 2},  #    bool:   Connection status (managed by polyglot)
+        {'driver': 'ST',  'value': 1,  'uom': 2},  #    bool:   Connection status (managed by polyglot)
         {'driver': 'GV1', 'value': 0,  'uom': 56}, #   float:   Version of this code (Major)
         {'driver': 'GV2', 'value': 0,  'uom': 56}, #   float:   Version of this code (Minor)
         {'driver': 'GV3', 'value': 0,  'uom': 25}, # integer: Number of the number of hubs we manage

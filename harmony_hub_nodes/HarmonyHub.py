@@ -43,6 +43,7 @@ class HarmonyHub(polyinterface.Node):
         self.name   = name
         self.host   = host
         self.port   = port
+        self.parent = parent
         self.client = None
         self.current_activity = -2
         self.thread = None
@@ -133,7 +134,8 @@ class HarmonyHub(polyinterface.Node):
         """
         self.client_status = "init"
         self.event = Event()
-        self.thread = Thread(target=self._get_client,daemon=True)
+        self.thread = Thread(target=self._get_client)
+        self.thread.daemon = True
         return self.thread.start()
 
     def _get_client(self):
@@ -145,6 +147,8 @@ class HarmonyHub(polyinterface.Node):
                 self.client = harmony_client.create_and_connect_client(self.host, self.port, self._set_current_activity)
             else:
                 self.client = harmony_client.create_and_connect_client(self.host, self.port)
+            if self.client is False:
+                self.l_error('get_client','harmony_client returned False, will retry connect during next shortPoll interval')
         except:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
@@ -188,13 +192,18 @@ class HarmonyHub(polyinterface.Node):
                     self.l_error("check_client","Thread is dead, need to restart")
                     self._set_st(0)
             else:
-                self.l_info("check_client","Waiting for client startup to complete, status = {0}..".format(self.client_status))
-                return False
+                if self.thread.isAlive():
+                    self.l_info("check_client","Waiting for client startup to complete, status = {0}..".format(self.client_status))
+                    return False
+                else:
+                    self.l_error("check_client","Client startup thread dead?, Please send log package to developer.  status = {0}..".format(self.client_status))
+                    self.st = 0
         # If we had a connection issue previously, try to fix it.
         if self.st == 0:
             self.l_debug("check_client","Calling get_client st=%d" % (self.st))
             if not self.get_client():
                 return False
+        self._set_st(1)
         return True
 
     def _close_client(self):
@@ -385,8 +394,8 @@ class HarmonyHub(polyinterface.Node):
     def l_info(self, name, string):
         LOGGER.info("Hub:%s:%s:%s: %s" %  (self.id,self.name,name,string))
 
-    def l_error(self, name, string):
-        LOGGER.error("Hub:%s:%s:%s: %s" % (self.id,self.name,name,string))
+    def l_error(self, name, string, exc_info=False):
+        LOGGER.error("Hub:%s:%s:%s: %s" % (self.id,self.name,name,string), exc_info=exc_info)
 
     def l_warning(self, name, string):
         LOGGER.warning("Hub:%s:%s:%s: %s" % (self.id,self.name,name,string))
