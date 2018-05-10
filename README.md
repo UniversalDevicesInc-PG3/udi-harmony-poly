@@ -30,7 +30,7 @@ WARNING: If you are running the v1 polyglot harmony nodeserver it will not longe
 If the discover does not work, or you prefer to not use it, you can add customParms in the Polyglot Web UI
 to tell it about your hubs.
 
-Create a param with the name 'hub_uniqueid' with a value: { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
+Create a param with the name 'hub_uniqueid' where uniqueid is the address that will be used for the ISY node, and with a value like: { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
 
 Anytime these params are added or modified you need to run the 'Discover' on the HarmonyController node.
 
