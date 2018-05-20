@@ -149,6 +149,7 @@ class HarmonyHub(polyinterface.Node):
                 self.client = harmony_client.create_and_connect_client(self.host, self.port)
             if self.client is False:
                 self.l_error('get_client','harmony_client returned False, will retry connect during next shortPoll interval')
+                return False
         except:
             exc_type, exc_value, exc_traceback = sys.exc_info()
             err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
