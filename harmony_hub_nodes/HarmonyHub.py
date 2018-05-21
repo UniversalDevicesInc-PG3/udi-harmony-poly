@@ -158,11 +158,11 @@ class HarmonyHub(polyinterface.Node):
             self._close_client()
             self.client_status = "failed"
             return False
+        self.l_info("get_client","PyHarmony client= " + str(self.client))
         self._set_st(1)
         # Setup activities and devices
         self.init_activities_and_devices()
         self._get_current_activity()
-        self.l_info("get_client","PyHarmony client= " + str(self.client))
         self.client_status = True
         # Hang around until asked to quit
         self.event.wait()
