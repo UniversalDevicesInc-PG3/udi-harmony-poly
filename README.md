@@ -136,8 +136,10 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 
-- 2.1.13 05/21/2018
-  - Fix Hub Responding ST driver to initialize properly.
+- 2.1.15 05/22/2018
+  - Fix Hub Responding ST driver to initialize properly. For sure this time?
+- 2.1.14 05/21/2018
+    - Fix Hub Responding ST driver to initialize properly.
 - 2.1.13 05/20/2018
   - Adding fix for crashing when hub timeout occurs since PyHarmony now traps it correctly. https://github.com/jimboca/udi-harmony-poly/issues/12
 - 2.1.12 05/06/2018

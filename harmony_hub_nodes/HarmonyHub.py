@@ -149,6 +149,7 @@ class HarmonyHub(polyinterface.Node):
                 self.client = harmony_client.create_and_connect_client(self.host, self.port)
             if self.client is False:
                 self.l_error('get_client','harmony_client returned False, will retry connect during next shortPoll interval')
+                self.client_status = "failed"
                 return False
         except:
             exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -184,6 +185,7 @@ class HarmonyHub(polyinterface.Node):
                             self.l_info("check_client","Activity method changed from {0} to {1}, need to restart client".format(self.last_activity_method,self.parent.activity_method))
                             self._set_st(0)
                         else:
+                            self._set_st(1)
                             return True
                     else:
                         self.l_error("check_client","Client no longer connected. client.state={0}".format(self.client.state.current_state()))
@@ -198,7 +200,7 @@ class HarmonyHub(polyinterface.Node):
                     return False
                 else:
                     self.l_error("check_client","Client startup thread dead?, Please send log package to developer.  status = {0}..".format(self.client_status))
-                    self.st = 0
+                    self._set_st(0)
         # If we had a connection issue previously, try to fix it.
         if self.st == 0:
             self.l_debug("check_client","Calling get_client st=%d" % (self.st))
@@ -241,8 +243,11 @@ class HarmonyHub(polyinterface.Node):
         self._set_current_activity(ca)
 
     def _set_st(self, value):
-        self.st = int(value)
-        return self.setDriver('ST', int(value))
+        value = int(value)
+        if hasattr(self,'st') and self.st != value:
+            self.st = int(value)
+            self.l_info("_set_st","setDriver(ST,{0})".format(self.st))
+            return self.setDriver('ST', self.st)
 
     def init_activities_and_devices(self):
         self.l_info("init_activities_and_devices","start")
