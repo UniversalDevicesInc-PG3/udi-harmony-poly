@@ -210,6 +210,7 @@ class HarmonyHub(polyinterface.Node):
         return True
 
     def _close_client(self):
+        self._set_st(0)
         if self.client is not None:
             try:
                 self.client.disconnect(send_close=True)
@@ -220,9 +221,6 @@ class HarmonyHub(polyinterface.Node):
                 return False
             finally:
                 self.client = None
-                self._set_st(0)
-        else:
-            self._set_st(0)
         # Tells the thread to finish
         if self.event is not None:
             self.event.set()
