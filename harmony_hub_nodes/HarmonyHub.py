@@ -49,6 +49,7 @@ class HarmonyHub(polyinterface.Node):
         self.thread = None
         self.client_status = None
         self.event  = None
+        self.st     = 0
         # Can't poll until start runs.
         self.do_poll = False
         self.l_info("init","hub '%s' '%s' %s" % (address, name, host))

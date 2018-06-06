@@ -136,6 +136,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 
+- 2.1.16 06/06/2018
+  - Fix issue with st not defined when initial startup fails to connect to hub
 - 2.1.15 05/22/2018
   - Fix Hub Responding ST driver to initialize properly. For sure this time?
 - 2.1.14 05/21/2018
