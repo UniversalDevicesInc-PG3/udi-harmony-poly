@@ -253,7 +253,8 @@ class HarmonyHub(polyinterface.Node):
         self.activity_nodes = dict()
         self.device_nodes = dict()
         # TODO: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
-        harmony_config = self.client.get_config()
+        #harmony_config = self.client.get_config()
+        harmony_config = self.parent.harmony_config
         #
         # Add all activities except -1 (PowerOff)
         #
