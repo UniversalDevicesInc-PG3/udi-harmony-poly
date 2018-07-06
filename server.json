@@ -8,7 +8,7 @@
     "notice": "Your disclaimer here",
     "shortPoll": "5",
     "longPoll": "60",
-    "profile_version": "2.1.8",
+    "profile_version": "2.1.17",
     "credits": [
         {
             "title": "udi-harmony-poly: A NodeServer for For Harmony Hub and ISY Integration",
