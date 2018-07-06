@@ -89,7 +89,7 @@ def write_profile(logger,hub_list):
     logger.info("{0} Writing {1}".format(pfx,en_us_txt))
     nls_tmpl = open("profile/nls/en_us.tmpl", "r")
     nls      = open(en_us_txt,  "w")
-    for line in nls_tmpl: 
+    for line in nls_tmpl:
         nls.write(re.sub(r'^(ND-HarmonyController-NAME = Harmony Hub Controller).*',r'\1 {0}'.format(sd['version']),line))
     nls_tmpl.close()
 
@@ -221,19 +221,19 @@ def write_profile(logger,hub_list):
                 subset_str += str(x)
                 if len(subset) > 0 and x == subset[0] - 1:
                     y = subset.pop(0)
-                    while len(subset) > 0 and y == subset[0] - 1:
+                    while len(subset) > 0 and (y == subset[0] or y == subset[0] - 1):
                         y = subset.pop(0)
                     subset_str += "-" + str(y)
             editor.write(EDITOR_TMPL_S % ('Btn' + d['id'], subset_str, 'BTN'))
 
-    
+
     nls.write("\n\n")
     for key in buttons:
         nls.write(NLS_TMPL % ('BTN', buttons[key], key))
-    
+
     editor.write("</editors>")
     nodedef.write("</nodeDefs>")
-            
+
     nodedef.close()
     editor.close()
     nls.close()
@@ -241,13 +241,13 @@ def write_profile(logger,hub_list):
     with open(config_file_name, 'w') as outfile:
         yaml.dump(config_data, outfile, default_flow_style=False)
     outfile.close()
-    
+
     with open(VERSION_FILE, 'w') as outfile:
         outfile.write(sd['profile_version'])
     outfile.close()
 
     write_profile_zip(logger)
-    
+
     logger.info(pfx + " done.")
 
     return(config_data)
@@ -304,6 +304,3 @@ if __name__ == "__main__":
                     write_profile_zip(logger)
             else:
                 write_profile(logger,hubs)
-
-
-
