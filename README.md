@@ -136,6 +136,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 
+- 2.1.18 08/29/2018
+  - Fix requirements to not include zip since it was causing pip3 errors, and shouldn't be required.
 - 2.1.17 07/06/2018
   - Fix issue with button order for creating condensed editor index for buttons for when a button is duplicated.
 - 2.1.16 06/06/2018
