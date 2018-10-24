@@ -124,6 +124,10 @@ Each harmony hub device will have a node.
    * https://linuxconfig.org/raspbian-gnu-linux-upgrade-from-jessie-to-raspbian-stretch-9
 1. This has only been tested with ISY 5.0.11 so it is not garunteed to work with any other version.
 
+# Issues
+
+If you have an issue where the nodes are not showing up properly, open the Polyglot UI and go to HarmonyHub -> Details -> Log, and clock 'Download Log Package' and send that to mailto:jimboca3@gmail.com as an email attachment.
+
 # Upgrading
 
 Open the Polyglot web page, go to nodeserver store and click "Update" for "HarmonyHub".
