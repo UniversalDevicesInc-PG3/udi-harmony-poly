@@ -126,7 +126,7 @@ Each harmony hub device will have a node.
 
 # Issues
 
-If you have an issue where the nodes are not showing up properly, open the Polyglot UI and go to HarmonyHub -> Details -> Log, and clock 'Download Log Package' and send that to jimboca3@gmail.com as an email attachment.
+If you have an issue where the nodes are not showing up properly, open the Polyglot UI and go to HarmonyHub -> Details -> Log, and clock 'Download Log Package' and send that to jimboca3@gmail.com as an email attachment, or send it in a PM [Universal Devices Forum](https://forum.universal-devices.com/messenger)
 
 # Upgrading
 
