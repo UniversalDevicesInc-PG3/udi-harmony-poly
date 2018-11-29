@@ -43,6 +43,7 @@ class HarmonyActivity(polyinterface.Node):
         #self.address = address
         # Only Hub devices are polled.
         self.do_poll     = False
+        self.st = 0
         # Add myself to the parents list of
 
     def start(self):
@@ -51,7 +52,7 @@ class HarmonyActivity(polyinterface.Node):
         This method is run once the Node is successfully added to the ISY
         and we get a return result from Polyglot.
         """
-        pass
+        self.query()
 
     def query(self):
         """
