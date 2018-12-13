@@ -214,6 +214,7 @@ class HarmonyHub(polyinterface.Node):
         self._set_st(0)
         if self.client is not None:
             try:
+                self.l_debug("_close_client: disconnecting client.")
                 self.client.disconnect(send_close=True)
             except:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
