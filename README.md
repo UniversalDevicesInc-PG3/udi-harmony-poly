@@ -18,13 +18,11 @@ WARNING: If you are running the v1 polyglot harmony nodeserver it will not longe
    * Really, do the backup, please
 3. Go to the Polyglot Store in the UI and install.
 4. Add NodeServer in Polyglot Web
-   * After the install completes, Polyglot will reboot your ISY, you can watch the status in the main polyglot log.
-5. Once your ISY is back up open the Admin Console and you should see a new node 'HarmonyController'
-   * If you don't see that node, then restart the Harmony node server from the Polyglot UI.
+5. Open the admin console (close and re-open if you had it open) and you should see a new node 'HarmonyController'
 6. The auto-discover should automatically run and find your hubs and add them.  Verify by checkig the nodeserver log.  If it doesn't then Select the HarmonyController node and click the 'Discover'.
    * While this is running you can view the nodeserver log in the Polyglot UI to see what it's doing
 7. This should find your Harmony Hubs and add them to the ISY with all devices and activities if your Harmony Hub and Polyglot are on the same subnet.  If they are not, then you can manually add the hub address as described in the next section,
-8. Once all nodes are added you will need to reboot the ISY again since the new custom profile is loaded.
+8. Once all nodes are added you will need to close and re-open the admin console the new custom profile is loaded.
 
 ### Manual Hub Entries
 
