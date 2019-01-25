@@ -137,7 +137,9 @@ class HarmonyHub(polyinterface.Node):
         self.event = Event()
         self.thread = Thread(target=self._get_client)
         self.thread.daemon = True
-        return self.thread.start()
+        self.l_debug('get_client','Starting Thread')
+        st = self.thread.start()
+        self.l_debug('get_client','Back from Thread start st={}'.format(st))
 
     def _get_client(self):
         self.l_info("get_client","Initializing PyHarmony Client")
@@ -167,7 +169,9 @@ class HarmonyHub(polyinterface.Node):
         self._get_current_activity()
         self.client_status = True
         # Hang around until asked to quit
+        self.l_debug('_get_client','Wait until we are told to stop')
         self.event.wait()
+        self.l_debug('_get_client','Event is done waiting, Goodbye')
 
     def check_client(self):
         # Thread is none before we try to start it.
