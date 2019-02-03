@@ -249,15 +249,27 @@ class HarmonyController(polyinterface.Controller):
         # Next the discovered ones
         #
         for config in discover_result:
-            self.hubs.append(
-                {
-                    'address': 'h'+id_to_address(config['uuid'],13),
-                    'name':    get_valid_node_name(config['friendlyName']),
-                    'host':    config['ip'],
-                    'port':    config['port'],
-                    'save':    True
-                }
-            )
+            addit = True
+            if 'current_fw_version' in config:
+                if config['current_fw_version'] == '4.15.206':
+                    self.l_error('discover','current_fw_version={} which is not supported.  See: {}'.
+                    format(
+                        config['current_fw_version'],
+                        'https://community.logitech.com/s/question/0D55A00008D4bZ4SAJ/harmony-hub-firmware-update-fixes-vulnerabilities'
+                    ))
+                    addit = False
+            else:
+                self.l_error('discover','current_fw_version not in config?  Will try to use anyway {}'.format(config))
+            if addit:
+                self.hubs.append(
+                    {
+                        'address': 'h'+id_to_address(config['uuid'],13),
+                        'name':    get_valid_node_name(config['friendlyName']),
+                        'host':    config['ip'],
+                        'port':    config['port'],
+                        'save':    True
+                    }
+                )
         #
         # Build the profile
         # It needs the hub_list set, so we will reset it later.
