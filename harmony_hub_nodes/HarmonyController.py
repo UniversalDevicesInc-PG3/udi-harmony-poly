@@ -396,8 +396,8 @@ class HarmonyController(polyinterface.Controller):
     def l_info(self, name, string):
         LOGGER.info("%s:%s: %s" %  (self.id,name,string))
 
-    def l_error(self, name, string):
-        LOGGER.error("%s:%s: %s" % (self.id,name,string))
+    def l_error(self, name, string, exc_info=False):
+        LOGGER.error("%s:%s: %s" % (self.id,name,string), exc_info=exc_info)
 
     def l_warning(self, name, string):
         LOGGER.warning("%s:%s: %s" % (self.id,name,string))

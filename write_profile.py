@@ -135,6 +135,9 @@ def write_profile(logger,hub_list):
         logger.info("{0} Initializing Client for {1} {2} {3}".format(pfx,address,name,host))
         client = harmony_hub_client(host=host)
         logger.info(pfx + " Client: " + str(client))
+        if client is False:
+            logger.error("{0} Error connecting to client {1} {2} {3}".format(pfx,address,name,host))
+            continue
         harmony_config = client.get_config()
         client.disconnect(send_close=True)
         #

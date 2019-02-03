@@ -139,6 +139,8 @@ Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
 # Release Notes
+- 2.1.23 02/03/3019
+  - Attempt to skip hubs with firmware that doesn't support xmpp
 - 2.1.22 01/24/2019
   - More debug when get_client event should exit
 - 2.1.21 12/27/2018
