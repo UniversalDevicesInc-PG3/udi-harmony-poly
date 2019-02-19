@@ -124,6 +124,10 @@ Each harmony hub device will have a node.
    * https://linuxconfig.org/raspbian-gnu-linux-upgrade-from-jessie-to-raspbian-stretch-9
 1. This has only been tested with ISY 5.0.11 so it is not garunteed to work with any other version.
 
+# Issues
+
+If you have an issue where the nodes are not showing up properly, open the Polyglot UI and go to HarmonyHub -> Details -> Log, and clock 'Download Log Package' and send that to jimboca3@gmail.com as an email attachment, or send it in a PM [Universal Devices Forum](https://forum.universal-devices.com/messenger)
+
 # Upgrading
 
 Open the Polyglot web page, go to nodeserver store and click "Update" for "HarmonyHub".
@@ -135,7 +139,14 @@ Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
 # Release Notes
-
+- 2.1.21 12/27/2018
+  - Added debugging for close client issues
+- 2.1.20 11/28/2018
+  - Fix bug with Activity st not being initialized.
+- 2.1.19 09/16/2018
+  - Added heartbeat DON/DOF
+- 2.1.18 08/29/2018
+  - Fix requirements to not include zip since it was causing pip3 errors, and shouldn't be required.
 - 2.1.17 07/06/2018
   - Fix issue with button order for creating condensed editor index for buttons for when a button is duplicated.
 - 2.1.16 06/06/2018

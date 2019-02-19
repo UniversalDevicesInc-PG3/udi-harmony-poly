@@ -63,6 +63,7 @@ class HarmonyController(polyinterface.Controller):
         # These start in threads cause they take a while
         self.discover_thread = None
         self.profile_thread = None
+        self.hb = 0
 
     def start(self):
         """
@@ -160,6 +161,7 @@ class HarmonyController(polyinterface.Controller):
         for node in self.nodes:
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].longPoll()
+        self.heartbeat()
 
     def query(self):
         self.l_debug('query','...')
@@ -174,6 +176,15 @@ class HarmonyController(polyinterface.Controller):
         """
         self.discover_thread = Thread(target=self._discover)
         self.discover_thread.start()
+
+    def heartbeat(self):
+        self.l_info('heartbeat','hb={}'.format(self.hb))
+        if self.hb == 0:
+            self.reportCmd("DON",2)
+            self.hb = 1
+        else:
+            self.reportCmd("DOF",2)
+            self.hb = 0
 
     def _discover(self):
         # Clear the hubs now so we clear some that may have been improperly added.

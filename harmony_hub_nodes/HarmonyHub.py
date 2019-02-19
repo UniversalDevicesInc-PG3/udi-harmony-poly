@@ -212,10 +212,12 @@ class HarmonyHub(polyinterface.Node):
 
     def _close_client(self):
         self._set_st(0)
+        self.l_debug('_close_client','client={}'.format(self.client))
         if self.client is not None:
             try:
-                self.l_debug("_close_client: disconnecting client.")
+                self.l_debug('_close_client','disconnecting client={}'.format(self.client))
                 self.client.disconnect(send_close=True)
+                self.l_debug('_close_client','disconnected client={}'.format(self.client))
             except:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
@@ -224,8 +226,11 @@ class HarmonyHub(polyinterface.Node):
             finally:
                 self.client = None
         # Tells the thread to finish
+        self.l_debug('_close_client','and finally client={} event={}'.format(self.client,self.event))
         if self.event is not None:
+            self.l_debug('_close_client','calling event.set')
             self.event.set()
+        self.l_debug('_close_client','returning')
         return True
 
     def _get_current_activity(self):
