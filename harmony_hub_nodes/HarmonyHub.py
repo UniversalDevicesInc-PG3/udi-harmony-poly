@@ -152,12 +152,12 @@ class HarmonyHub(polyinterface.Node):
                 self.client = harmony_client.create_and_connect_client(self.host, self.port)
             if self.client is False:
                 self.l_error('get_client','harmony_client returned False, will retry connect during next shortPoll interval')
+                self._set_st(0)
+                self._close_client()
                 self.client_status = "failed"
                 return False
         except:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
-            self.l_error("get_client",err_str)
+            self.l_error('get_client','Failed to connect to host "{}" port "{}"'.format(self.host,self.port),True)
             self._set_st(0)
             self._close_client()
             self.client_status = "failed"
@@ -218,17 +218,18 @@ class HarmonyHub(polyinterface.Node):
         self._set_st(0)
         self.l_debug('_close_client','client={}'.format(self.client))
         if self.client is not None:
-            try:
-                self.l_debug('_close_client','disconnecting client={}'.format(self.client))
-                self.client.disconnect(send_close=True)
-                self.l_debug('_close_client','disconnected client={}'.format(self.client))
-            except:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
-                self.l_error("_close_client",err_str)
-                return False
-            finally:
-                self.client = None
+            if self.client is False:
+                self.l_debug('_close_client','no client={}'.format(self.client))
+            else:
+                try:
+                    self.l_debug('_close_client','disconnecting client={}'.format(self.client))
+                    self.client.disconnect(send_close=True)
+                    self.l_debug('_close_client','disconnected client={}'.format(self.client))
+                except:
+                    self.l_error("_close_client",'client.disconnect failed',True)
+                    return False
+                finally:
+                    self.client = None
         # Tells the thread to finish
         self.l_debug('_close_client','and finally client={} event={}'.format(self.client,self.event))
         if self.event is not None:
@@ -241,9 +242,7 @@ class HarmonyHub(polyinterface.Node):
         try:
             ca = self.client.get_current_activity()
         except:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
-            self.l_error("get_current_activity",err_str)
+            self.l_error("get_current_activity",'client.get_current_activity failed',True)
             self._set_st(0)
             return False
         self._set_st(1)
@@ -379,7 +378,7 @@ class HarmonyHub(polyinterface.Node):
             try:
                 ret = self.client.change_channel(channel)
             except (Exception) as err:
-                self.l_error('change_channel','failed {0}'.format(err), exc_info=True)
+                self.l_error('change_channel','failed {0}'.format(err), True)
                 return False
             self.l_debug("change_channel","%s result=%s" % (channel,str(ret)))
             # TODO: This always returns False :(
