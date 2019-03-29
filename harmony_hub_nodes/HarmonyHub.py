@@ -1,5 +1,5 @@
 
-import polyinterface,sys,logging
+import polyinterface,sys,logging,yaml
 from traceback import format_exception
 from threading import Thread,Event
 from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
@@ -137,7 +137,9 @@ class HarmonyHub(polyinterface.Node):
         self.event = Event()
         self.thread = Thread(target=self._get_client)
         self.thread.daemon = True
-        return self.thread.start()
+        self.l_debug('get_client','Starting Thread')
+        st = self.thread.start()
+        self.l_debug('get_client','Back from Thread start st={}'.format(st))
 
     def _get_client(self):
         self.l_info("get_client","Initializing PyHarmony Client")
@@ -167,7 +169,9 @@ class HarmonyHub(polyinterface.Node):
         self._get_current_activity()
         self.client_status = True
         # Hang around until asked to quit
+        self.l_debug('_get_client','Wait until we are told to stop')
         self.event.wait()
+        self.l_debug('_get_client','Event is done waiting, Goodbye')
 
     def check_client(self):
         # Thread is none before we try to start it.
@@ -254,13 +258,25 @@ class HarmonyHub(polyinterface.Node):
             self.l_info("_set_st","setDriver(ST,{0})".format(self.st))
             return self.setDriver('ST', self.st)
 
+    def get_config(self):
+        # FIXME: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
+        # FIXME: But config.yaml doesn't say which activities go with which hub...
+        # Read the config if available.
+        cfile = self.address + ".yaml"
+        self.l_debug('get_config','Loading hub config: {}'.format(cfile))
+        try:
+            with open(cfile, 'r') as infile:
+                return yaml.load(infile)
+        except:
+            self.l_error('get_config',
+                         "Unable to load hub config '{}', will load from hub which may not match current profile, please run discover again.".format(cfile), exc_info=True)
+        return self.client.get_config()
+
     def init_activities_and_devices(self):
         self.l_info("init_activities_and_devices","start")
         self.activity_nodes = dict()
         self.device_nodes = dict()
-        # FIXME: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
-        # FIXME: But config.yaml doesn't say which activities go with which hub...
-        harmony_config = self.client.get_config()
+        harmony_config = self.get_config()
         #harmony_config = self.parent.harmony_config['info']
         #
         # Add all activities except -1 (PowerOff)
