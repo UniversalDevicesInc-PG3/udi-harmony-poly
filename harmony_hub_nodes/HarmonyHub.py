@@ -104,7 +104,13 @@ class HarmonyHub(polyinterface.Node):
         self.reportDrivers()
 
     def stop(self):
+        self.l_debug('stop','...')
         return self._close_client()
+
+    def restart(self):
+        # Called by controller to restart myself
+        self.stop()
+        self.start()
 
     def _set_current_activity(self, id, force=False):
         """
@@ -123,8 +129,12 @@ class HarmonyHub(polyinterface.Node):
         # Make the activity node current, unless it's -1 which is poweroff
         ignore_id=False
         if id != -1:
-            self.activity_nodes[str(id)]._set_st(1)
-            ignore_id=id
+            sid = str(id)
+            if sid in self.activity_nodes:
+                self.activity_nodes[str(id)]._set_st(1)
+                ignore_id=id
+            else:
+                self.l_error('_set_current_activity','activity {} not in nodes list.'.format(sid))
         # Update all the other activities to not be the current.
         self._set_all_activities(0,ignore_id=ignore_id)
         return True

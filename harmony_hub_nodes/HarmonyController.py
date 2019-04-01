@@ -429,7 +429,14 @@ class HarmonyController(polyinterface.Controller):
         # Upload the profile
         #
         st = self.install_profile()
+        self.restart_hubs()
         return st
+
+    def restart_hubs(self):
+        self.l_debug('restart_hubs','restarting hubs')
+        for hub in self.hubs:
+            address = hub['address']
+            self.nodes[address].restart()
 
     def install_profile(self):
         self.setDriver('GV7', 5)
