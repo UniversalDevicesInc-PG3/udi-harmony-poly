@@ -141,7 +141,7 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 - 2.1.27 03/31/2019
-  - [Send DON/DOF when an Activity is turned on or off](https://github.com/jimboca/udi-harmony-poly/issues/19)
+  - [Send DON/DOF when an Activity is turned on or off](https://github.com/jimboca/udi-harmony-poly/issues/19 )
 - 2.1.26 03/31/2019
   - Fix issue where Current Activity would be -1 after startup until a query was run or activity was changed
   - [Nodeserver should used saved profile data](https://github.com/jimboca/udi-harmony-poly/issues/11)
