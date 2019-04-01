@@ -13,11 +13,8 @@ This node server is intended to support the [Logitech Harmony Hub](http://www.lo
 
 WARNING: If you are running the v1 polyglot harmony nodeserver it will not longer work after this one is installed.  But, initially I would advise everyone to install this in a new slot and leave the old one running.  If you go back to the old one you will need manually re-install the older version of pyharmony if you have polyglot v1 and v2 running on the same machine.
 
-<<<<<<< HEAD
 IMPORTANT: The latest harmony hub firmware broke access, you must manually enable xmpp for each hub in the Harmony App:  https://community.logitech.com/s/question/0D55A00008D4bZ4SAJ/harmony-hub-firmware-update-fixes-vulnerabilities
-=======
-IMPORTANT: Current versions of harmony hub firmware broke access, so harmony released a new version to fix this but it has to be manually installed:  https://community.logitech.com/s/question/0D55A00008D4bZ4SAJ/harmony-hub-firmware-update-fixes-vulnerabilities
->>>>>>> master
+
 
 1. Make sure your Harmony Hubs have a static IP assigned.  The nodeserver can not re-find the hub if it changes IP addresses.  This may be fixed in the future.
 2. Backup Your ISY in case of problems!
@@ -25,11 +22,7 @@ IMPORTANT: Current versions of harmony hub firmware broke access, so harmony rel
 3. Go to the Polyglot Store in the UI and install.
 4. Add NodeServer in Polyglot Web
 5. Open the admin console (close and re-open if you had it open) and you should see a new node 'HarmonyController'
-<<<<<<< HEAD
 6. The auto-discover should automatically run and find your hubs and add them.  Verify by checking the nodeserver log.  If it doesn't then Select the HarmonyController node and click the 'Discover'.
-=======
-6. The auto-discover should automatically run and find your hubs and add them.  Verify by checkig the nodeserver log.  If it doesn't then Select the HarmonyController node and click the 'Discover'.
->>>>>>> master
    * While this is running you can view the nodeserver log in the Polyglot UI to see what it's doing
 7. This should find your Harmony Hubs and add them to the ISY with all devices and activities if your Harmony Hub and Polyglot are on the same subnet.  If they are not, then you can manually add the hub address as described in the next section,
 8. Once all nodes are added you will need to close and re-open the admin console the new custom profile is loaded.
@@ -147,7 +140,7 @@ Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
 # Release Notes
-- 2.1.26 (not released yet)
+- 2.1.26 03/31/2019
   - Fix issue where Current Activity would be -1 after startup until a query was run or activity was changed
   - [Nodeserver should used saved profile data](https://github.com/jimboca/udi-harmony-poly/issues/11)
   - [Build Profile doesn't add new devices or activities](https://github.com/jimboca/udi-harmony-poly/issues/16)
