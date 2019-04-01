@@ -142,7 +142,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 - 2.1.25 (not released yet)
   - Fix issue where Current Activity would be -1 after startup until a query was run or activity was changed
   - [Nodeserver should used saved profile data](https://github.com/jimboca/udi-harmony-poly/issues/11)
-
+  - [Build Profile doesn't add new devices or activities](https://github.com/jimboca/udi-harmony-poly/issues/16)
+  - [device id=xx not in command hash](https://github.com/jimboca/udi-harmony-poly/issues/18)
 - 2.1.24 02/03/2019
   - Add note about unsupported firmware version 4.15.206
 - 2.1.23 02/03/2019
