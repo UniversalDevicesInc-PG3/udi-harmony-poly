@@ -123,6 +123,7 @@ class HarmonyController(polyinterface.Controller):
         #
         self.l_info("start","Adding known hubs...")
         self._set_num_hubs(0)
+        self.first_run = False
         #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
         if self.polyConfig['nodes']:
             # Load the config info about the hubs.
@@ -134,6 +135,7 @@ class HarmonyController(polyinterface.Controller):
         else:
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
+            self.first_run = True
             self.discover()
         self.l_info("start","done")
 
@@ -441,7 +443,8 @@ class HarmonyController(polyinterface.Controller):
         # Upload the profile
         #
         st = self.install_profile()
-        self.restart_hubs()
+        if not self.first_run:
+            self.restart_hubs()
         return st
 
     def restart_hubs(self):

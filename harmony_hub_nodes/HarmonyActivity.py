@@ -44,6 +44,7 @@ class HarmonyActivity(polyinterface.Node):
         # Only Hub devices are polled.
         self.do_poll     = False
         self.st = 0
+        self.startup     = True
         # Add myself to the parents list of
 
     def start(self):
@@ -61,11 +62,19 @@ class HarmonyActivity(polyinterface.Node):
         there is a need.
         """
         self._set_st(self.st)
+        self.startup = False
         return True
 
     def _set_st(self, st):
-        self.st = st
-        self.setDriver('ST',int(st))
+        st = int(st)
+        # Don't change on startup when self.st=-1
+        if not self.startup and st != self.st:
+            if st == 0:
+                self.reportCmd("DOF",2)
+            else:
+                self.reportCmd("DON",2)
+        self.setDriver('ST',st)
+        self.st = int(st)
         self.l_debug("_set_st","set=%s, get=%s" % (st,self.getDriver('ST')))
 
     def _cmd_on(self, command):
@@ -90,6 +99,7 @@ class HarmonyActivity(polyinterface.Node):
         self.l_debug("_cmd_off","ret=%s" % (str(ret)))
         if ret:
             self._set_st(0)
+            self.reportCmd("DOF",2)
         return ret
 
     def l_info(self, name, string):
