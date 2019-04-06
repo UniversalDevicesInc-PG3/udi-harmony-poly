@@ -250,6 +250,7 @@ class HarmonyHub(polyinterface.Node):
         return True
 
     def _get_current_activity(self):
+        self.l_debug("_get_current_activity",'...')
         try:
             ca = self.client.get_current_activity()
         except IqTimeout:
