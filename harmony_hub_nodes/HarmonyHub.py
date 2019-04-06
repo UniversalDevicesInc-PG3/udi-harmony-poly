@@ -5,6 +5,7 @@ from threading import Thread,Event
 from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
 from harmony_hub_funcs import ip2long,long2ip,get_valid_node_name
 from pyharmony import client as harmony_client
+from sleekxmpp.exceptions import IqError, IqTimeout
 
 LOGGER = polyinterface.LOGGER
 
@@ -251,13 +252,16 @@ class HarmonyHub(polyinterface.Node):
     def _get_current_activity(self):
         try:
             ca = self.client.get_current_activity()
+        except IqTimeout:
+            self.l_error("_get_current_activity",'client.get_current_activity timeout',False)
+            self._close_client()
         except:
-            self.l_error("get_current_activity",'client.get_current_activity failed',True)
+            self.l_error("_get_current_activity",'client.get_current_activity failed',True)
             self._set_st(0)
             return False
         self._set_st(1)
         if int(self.current_activity) != int(ca):
-            self.l_debug("get_current_activity"," poll={0} current={1}".format(ca,self.current_activity))
+            self.l_debug("_get_current_activity"," poll={0} current={1}".format(ca,self.current_activity))
         self._set_current_activity(ca)
 
     def _set_st(self, value):
