@@ -83,15 +83,14 @@ class HarmonyHub(polyinterface.Node):
         self.l_info("start","done hub '%s' '%s' %s" % (self.address, self.name, self.host))
 
     def shortPoll(self):
-        if self.check_client():
-            # Query in poll mode, or if we haven't set the current_activity yet (which happens on startup)
-            if self.parent.activity_method == 1 or self.current_activity == -2:
-                self._get_current_activity()
-        else:
-            return False
+        # Query in poll mode, or if we haven't set the current_activity yet (which happens on startup)
+        #self.l_debug('shortPoll','...')
+        if self.parent.activity_method == 1:
+            self._get_current_activity()
 
     def longPoll(self):
-        pass
+        #self.l_debug('longPoll','...')
+        self.check_client()
 
     def query(self):
         """
@@ -251,19 +250,24 @@ class HarmonyHub(polyinterface.Node):
 
     def _get_current_activity(self):
         self.l_debug("_get_current_activity",'...')
-        try:
-            ca = self.client.get_current_activity()
-        except IqTimeout:
-            self.l_error("_get_current_activity",'client.get_current_activity timeout',False)
-            self._close_client()
-        except:
-            self.l_error("_get_current_activity",'client.get_current_activity failed',True)
-            self._set_st(0)
+        if self.check_client():
+            try:
+                ca = self.client.get_current_activity()
+            except IqTimeout:
+                self.l_error("_get_current_activity",'client.get_current_activity timeout',False)
+                self._close_client()
+                return False
+            except:
+                self.l_error("_get_current_activity",'client.get_current_activity failed',True)
+                self._set_st(0)
+                return False
+            self._set_st(1)
+            if int(self.current_activity) != int(ca):
+                self.l_debug("_get_current_activity"," poll={0} current={1}".format(ca,self.current_activity))
+            self._set_current_activity(ca)
+            return True
+        else:
             return False
-        self._set_st(1)
-        if int(self.current_activity) != int(ca):
-            self.l_debug("_get_current_activity"," poll={0} current={1}".format(ca,self.current_activity))
-        self._set_current_activity(ca)
 
     def _set_st(self, value):
         value = int(value)
