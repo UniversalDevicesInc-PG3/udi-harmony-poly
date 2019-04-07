@@ -75,7 +75,7 @@ class HarmonyController(polyinterface.Controller):
         version does nothing.
         """
         #polyinterface.LOGGER("start: This is {0} error {1}".format("an"))
-        self.l_info('start','Starting Config=%s' % (self.polyConfig))
+        self.l_info('start','Starting')
         self.setDriver('GV1', self.serverdata['version_major'])
         self.setDriver('GV2', self.serverdata['version_minor'])
         # Show these for now
@@ -107,6 +107,10 @@ class HarmonyController(polyinterface.Controller):
         else:
             self.activity_method = int(val)
         self.l_debug("start","GV9={0} activity_method={1}".format(val,self.activity_method))
+        # Initialize hubs
+        self.clear_hubs()
+        # Watch Mode
+        self.set_watch_mode(self.getDriver('GV10'))
 
         # New vesions need to force an update
         if not 'cver' in self.polyConfig['customData']:
@@ -132,6 +136,8 @@ class HarmonyController(polyinterface.Controller):
             self.load_hubs()
             # Restore known hubs from the poly config nodes
             self.add_hubs()
+            # TODO: Need check if this is necessary
+            self.check_profile()
         else:
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
@@ -286,7 +292,7 @@ class HarmonyController(polyinterface.Controller):
 
     def add_hub(self,address,name,host,port,update=True):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} update={4}".format(address,name,host,port,update))
-        self.addNode(HarmonyHub(self, address, name, host, port))
+        self.addNode(HarmonyHub(self, address, name, host, port, watch=self.watch_mode))
         self._set_num_hubs(self.num_hubs + 1)
         if update:
             self.update_hub_list({'address': address, 'name': name, 'host': host, 'port': port})
@@ -374,17 +380,13 @@ class HarmonyController(polyinterface.Controller):
             try:
                 config_h = open(CONFIG, 'r')
             except:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
-                self.l_error('load_config','failed to open cfg={0} Error: {1}'.format(CONFIG,err_str))
+                self.l_error('load_config','failed to open cfg={0}'.format(CONFIG),True)
                 return False
             try:
                 harmony_config = yaml.load(config_h)
                 self.harmony_config = harmony_config
             except:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                err_str = ''.join(format_exception(exc_type, exc_value, exc_traceback))
-                self.l_error('load_config','failed to parse cfg={0} Error: {1}'.format(CONFIG,err_str))
+                self.l_error('load_config','failed to parse cfg={0}'.format(CONFIG),True)
                 return False
             finally:
                 # This is always executed.
@@ -419,24 +421,46 @@ class HarmonyController(polyinterface.Controller):
     def l_debug(self, name, string):
         LOGGER.debug("%s:%s: %s" % (self.id,name,string))
 
-    def build_profile(self):
+    def check_profile(self):
+        cdata = deepcopy(self.polyConfig['customData'])
+        if not 'profile_version' in cdata:
+            cdata['profile_version'] = None
+        self.l_info('check_profile','profile_version: source={0} current={1}'.format(self.serverdata['profile_version'],cdata['profile_version']))
+        if self.serverdata['profile_version'] != cdata['profile_version']:
+            self.l_info('check_profile','updating profile...')
+            self.update_profile()
+
+    # Just calls build_profile with poll_hubs=False
+    def update_profile(self):
+        self.build_profile(False)
+
+    def build_profile(self,poll_hubs=True):
         """
         Start the build_profile in a thread so we don't cause timeouts :(
         """
-        self.profile_thread = Thread(target=self._build_profile)
+        if poll_hubs:
+            self.profile_thread = Thread(target=self._build_profile)
+        else:
+            self.profile_thread = Thread(target=self._update_profile)
         self.profile_thread.start()
 
     def _build_profile(self):
         """
-        Build the profile from our internal list of hubs
+        Build the profile by polling the hubs
         """
         self.setDriver('GV7', 4)
         # This writes all the profile data files and returns our config info.
+        wrote_profile = False
         try:
             config_data = write_profile(LOGGER,self.hubs)
+            wrote_profile = True
         except (Exception) as err:
             self.l_error('build_profile','write_profile failed: {}'.format(err), exc_info=True)
             self.setDriver('GV7', 7)
+        cdata = deepcopy(self.polyConfig['customData'])
+        if wrote_profile:
+            cdata['profile_version'] = self.serverdata['profile_version']
+            self.saveCustomData(cdata)
         # Reload the config we just generated.
         self.load_config()
         #
@@ -452,6 +476,23 @@ class HarmonyController(polyinterface.Controller):
         for hub in self.hubs:
             address = hub['address']
             self.nodes[address].restart()
+
+    def _update_profile(self):
+        """
+        Build the profile from the previously saved info
+        """
+        self.setDriver('GV7', 4)
+        # This writes all the profile data files and returns our config info.
+        try:
+            config_data = write_profile(LOGGER,self.hubs,False)
+        except (Exception) as err:
+            self.l_error('build_profile','write_profile failed: {}'.format(err), exc_info=True)
+            self.setDriver('GV7', 7)
+        # Reload the config we just generated, it shouldn't update, but it might.
+        self.load_config()
+        # Upload the profile
+        st = self.install_profile()
+        return st
 
     def install_profile(self):
         self.setDriver('GV7', 5)
@@ -491,6 +532,17 @@ class HarmonyController(polyinterface.Controller):
         else:
             self.l_error("set_debug_level","Unknown level {0}".format(level))
 
+    def set_watch_mode(self,val):
+        if val is None:
+            self.l_debug("set_watch_mode","{0}".format(val))
+            val = 1
+        self.watch_mode = True if int(val) == 1 else False
+        self.l_debug("set_watch_mode","{0}={1}".format(val,self.watch_mode))
+        for hub in self.hubs:
+            address = hub['address']
+            self.nodes[address].set_watch(self.watch_mode)
+        self.setDriver('GV10',val)
+
     def _cmd_discover(self, command):
         self.discover()
 
@@ -501,6 +553,10 @@ class HarmonyController(polyinterface.Controller):
     def _cmd_install_profile(self,command):
         self.l_info("_cmd_install_profile","installing...")
         self.poly.installprofile()
+
+    def _cmd_update_profile(self,command):
+        self.l_info("_cmd_update_profile","...")
+        self.update_profile()
 
     def _cmd_set_debug_mode(self,command):
         val = int(command.get('value'))
@@ -530,6 +586,10 @@ class HarmonyController(polyinterface.Controller):
         self.setDriver('GV6', val)
         self.polyConfig['longPoll'] = val
 
+    def _cmd_set_watch_mode(self,command):
+        val = int(command.get('value'))
+        self.set_watch_mode(val)
+
     id = 'HarmonyController'
     """
        Commands:
@@ -539,11 +599,13 @@ class HarmonyController(polyinterface.Controller):
         'DISCOVER': _cmd_discover,
         'BUILD_PROFILE': _cmd_build_profile,
         'INSTALL_PROFILE': _cmd_install_profile,
+        'UPDATE_PROFILE': _cmd_update_profile,
         'SET_DEBUGMODE': _cmd_set_debug_mode,
         'SET_SHORTPOLL': _cmd_set_shortpoll,
         'SET_LONGPOLL':  _cmd_set_longpoll,
         'SET_DI_MODE': _cmd_set_discover_mode,
-        'SET_ACTIVITY_METHOD': _cmd_set_activity_method
+        'SET_ACTIVITY_METHOD': _cmd_set_activity_method,
+        'SET_WATCH_MODE': _cmd_set_watch_mode
     }
     """
        Driver Details:
@@ -558,5 +620,6 @@ class HarmonyController(polyinterface.Controller):
         {'driver': 'GV6', 'value': 60, 'uom': 25}, # integer: longpoll
         {'driver': 'GV7', 'value': 0,  'uom': 25}, #    bool: Profile status
         {'driver': 'GV8', 'value': 1,  'uom': 25}, #    bool: Auto Discover
-        {'driver': 'GV9', 'value': 2,  'uom': 25}  #    bool: Activity Method
+        {'driver': 'GV9', 'value': 2,  'uom': 25}, #    bool: Activity Method
+        {'driver': 'GV10', 'value': 2,  'uom': 2}   #    bool: Activity Method
     ]

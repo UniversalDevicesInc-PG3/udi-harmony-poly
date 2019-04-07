@@ -81,6 +81,8 @@ The settings for this node are
    * None = Don't watch Harmony for activity changes
    * Short Poll = Poll Harmony Hub during each Short Poll Interval (Old default method)
    * Callback = The Harmony Hub reports changes directly to the nodeserver (prefered new method)
+#### Watch Hubs
+  * Enable/Disable watching the hubs.  If you know the hubs will be offline for a long time then set this False. I use this because I know when the power is turned off to the hub when I am not going to be home for an extended period of time.
 
 ### Node Commands
 
@@ -140,6 +142,9 @@ Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
 # Release Notes
+- 2.2.0 04/06/2019
+  - Recover properly from a non responsive hub.  It will be polled on longPoll and reconnect when it's back
+  - Added Watch Hubs setting which can be disabled when all hubs are down for an extended period of time
 - 2.1.27 03/31/2019
   - [Send DON/DOF when an Activity is turned on or off](https://github.com/jimboca/udi-harmony-poly/issues/19 )
 - 2.1.26 03/31/2019

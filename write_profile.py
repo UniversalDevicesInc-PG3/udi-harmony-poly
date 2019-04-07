@@ -76,7 +76,7 @@ ND-%s-ICON = Input
 # The NLS entry for each indexed item
 NLS_TMPL = "%s-%d = %s\n"
 
-def write_profile(logger,hub_list):
+def write_profile(logger,hub_list,poll_hubs=True):
     config_data = {}
     sd = get_server_data(logger)
     if sd is False:
@@ -131,20 +131,34 @@ def write_profile(logger,hub_list):
         nls.write("\n# %s" % (info))
         nls.write(NLS_NODE_TMPL % (address, name, address))
         #
-        # Connect to the hub and get the configuration
-        logger.info("{0} Initializing Client for {1} {2} {3}".format(pfx,address,name,host))
-        client = harmony_hub_client(host=host)
-        logger.info(pfx + " Client: " + str(client))
-        if client is False:
-            logger.error("{0} Error connecting to client {1} {2} {3}".format(pfx,address,name,host))
-            continue
-        harmony_config = client.get_config()
-        client.disconnect(send_close=True)
+        # Build or load the config file.
         #
-        # Save the config for reference.
         harmony_config_file = address + ".yaml"
-        with open(harmony_config_file, 'w') as outfile:
-            yaml.safe_dump(harmony_config, outfile, default_flow_style=False)
+        #
+        # Building a new config
+        #
+        if not poll_hubs:
+            logger.debug('{} Loading hub config: {}'.format(pfx,harmony_config_file))
+            try:
+                with open(harmony_config_file, 'r') as infile:
+                    harmony_config = yaml.load(infile)
+            except:
+                logger.error("{} Error loading config {} will poll hub".format(pfx,harmony_config_file),True)
+                poll_hubs = True
+        if poll_hubs:
+            # Connect to the hub and get the configuration
+            logger.info("{0} Initializing Client for {1} {2} {3}".format(pfx,address,name,host))
+            client = harmony_hub_client(host=host)
+            logger.info(pfx + " Client: " + str(client))
+            if client is False:
+                logger.error("{0} Error connecting to client {1} {2} {3}".format(pfx,address,name,host))
+                continue
+            harmony_config = client.get_config()
+            client.disconnect(send_close=True)
+            #
+            # Save the config for reference.
+            with open(harmony_config_file, 'w') as outfile:
+                yaml.safe_dump(harmony_config, outfile, default_flow_style=False)
         #
         # Build the activities
         #

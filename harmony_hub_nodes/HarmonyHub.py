@@ -28,7 +28,7 @@ class HarmonyHub(polyinterface.Node):
     reportDrivers(): Forces a full update of all drivers to Polyglot/ISY.
     query(): Called when ISY sends a query request to Polyglot for this specific node
     """
-    def __init__(self, parent, address, name, host, port):
+    def __init__(self, parent, address, name, host, port, watch=True):
         """
         Optional.
         Super runs all the parent class necessities. You do NOT have
@@ -45,6 +45,8 @@ class HarmonyHub(polyinterface.Node):
         self.host   = host
         self.port   = port
         self.parent = parent
+        self.watch  = False # Not watching yet
+        self.watch_init  = watch
         self.client = None
         self.current_activity = -2
         self.thread = None
@@ -72,25 +74,40 @@ class HarmonyHub(polyinterface.Node):
         self.setDriver('GV1', ip2long(self.host))
         self.setDriver('GV2', self.port)
         #
-        # Connect to the hub
+        # Connect to the hub if desired
         #
-        self.get_client()
+        self.set_watch(self.watch_init)
         #
         # Call query to initialize and pull the info from the hub.
         #
-        self.query();
         self.do_poll = True
         self.l_info("start","done hub '%s' '%s' %s" % (self.address, self.name, self.host))
+
+    def set_watch(self,val):
+        if val:
+            if self.watch:
+                # Just make sure it's running
+                self.check_client()
+            else:
+                # Not watching, start it up
+                self.get_client()
+                self.query()
+                self.watch = val
+        else:
+            # Just shut it down not matter what
+            self.stop()
 
     def shortPoll(self):
         # Query in poll mode, or if we haven't set the current_activity yet (which happens on startup)
         #self.l_debug('shortPoll','...')
-        if self.parent.activity_method == 1:
-            self._get_current_activity()
+        if self.watch:
+            if self.parent.activity_method == 1:
+                self._get_current_activity()
 
     def longPoll(self):
         #self.l_debug('longPoll','...')
-        self.check_client()
+        if self.watch:
+            self.check_client()
 
     def query(self):
         """
@@ -99,8 +116,9 @@ class HarmonyHub(polyinterface.Node):
         there is a need.
         """
         self.l_debug('query','...')
-        if self.check_client():
-            self._get_current_activity()
+        if self.watch:
+            if self.check_client():
+                self._get_current_activity()
         self.reportDrivers()
 
     def stop(self):

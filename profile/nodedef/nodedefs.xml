@@ -22,6 +22,8 @@
       <st id="GV8" editor="AUTODI" />
       <!-- activiy watch method -->
       <st id="GV9" editor="ACTMET" />
+      <!-- activiy watch method -->
+      <st id="GV10" editor="BOOL" />
     </sts>
     <cmds>
       <sends>
@@ -44,9 +46,13 @@
         <cmd id="SET_ACTIVITY_METHOD">
           <p id="" editor="ACTMET" init="GV9" />
         </cmd>
+        <cmd id="SET_WATCH_MODE">
+          <p id="" editor="BOOL" init="GV10" />
+        </cmd>
         <cmd id="QUERY" />
         <cmd id="DISCOVER" />
         <cmd id="INSTALL_PROFILE" />
+        <cmd id="UPDATE_PROFILE" />
         <cmd id="BUILD_PROFILE" />
       </accepts>
     </cmds>
