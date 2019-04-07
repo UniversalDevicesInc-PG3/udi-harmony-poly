@@ -145,6 +145,7 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 - 2.2.0 04/06/2019
   - Recover properly from a non responsive hub.  It will be polled on longPoll and reconnect when it's back
   - Added Watch Hubs setting which can be disabled when all hubs are down for an extended period of time
+    Profile will be rebuilt on restart, so must restart admin console to see
 - 2.1.27 03/31/2019
   - [Send DON/DOF when an Activity is turned on or off](https://github.com/jimboca/udi-harmony-poly/issues/19 )
 - 2.1.26 03/31/2019
