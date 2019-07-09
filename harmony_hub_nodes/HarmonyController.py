@@ -475,7 +475,10 @@ class HarmonyController(polyinterface.Controller):
         self.l_debug('restart_hubs','restarting hubs')
         for hub in self.hubs:
             address = hub['address']
-            self.nodes[address].restart()
+            if address in self.nodes:
+                self.nodes[address].restart()
+            else:
+                self.l_debug('restart_hubs','hub {} does not seem to exist yet'.format(address))
 
     def _update_profile(self):
         """
