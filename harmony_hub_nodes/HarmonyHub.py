@@ -37,6 +37,8 @@ class HarmonyHub(polyinterface.Node):
         :param parent: Reference to the Controller class
         :param address: This nodes address
         :param name: This nodes name
+        :param watch: Allow turning off hub monitoring when you know the hubs are not responding.
+        :             Set to false until it's all running so short/long poll and query won't also try to start it.
         """
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
         # The id using the original case of the string
@@ -91,21 +93,20 @@ class HarmonyHub(polyinterface.Node):
             else:
                 # Not watching, start it up
                 self.get_client()
-                self.query()
                 self.watch = val
         else:
-            # Just shut it down not matter what
+            # Just shut it down no matter what
             self.stop()
 
     def shortPoll(self):
         # Query in poll mode, or if we haven't set the current_activity yet (which happens on startup)
-        #self.l_debug('shortPoll','...')
+        #self.l_debug('shortPoll','watch={} client_status={}'.format(self.watch,self.client_status))
         if self.watch:
             if self.parent.activity_method == 1:
                 self._get_current_activity()
 
     def longPoll(self):
-        #self.l_debug('longPoll','...')
+        #self.l_debug('longPoll','watch={} client_status={}'.format(self.watch,self.client_status))
         if self.watch:
             self.check_client()
 
@@ -115,7 +116,7 @@ class HarmonyHub(polyinterface.Node):
         the parent class, so you don't need to override this method unless
         there is a need.
         """
-        self.l_debug('query','...')
+        self.l_debug('query','watch={} client_status={}'.format(self.watch,self.client_status))
         if self.watch:
             if self.check_client():
                 self._get_current_activity()
@@ -162,6 +163,7 @@ class HarmonyHub(polyinterface.Node):
         Start the client in a thread so if it dies, we don't die.
         """
         self.client_status = "init"
+        self.l_debug('get_client','Starting Thread')
         self.event = Event()
         self.thread = Thread(target=self._get_client)
         self.thread.daemon = True
@@ -195,6 +197,7 @@ class HarmonyHub(polyinterface.Node):
         # Setup activities and devices
         self.init_activities_and_devices()
         self._get_current_activity()
+        self.query()
         self.client_status = True
         # Hang around until asked to quit
         self.l_debug('_get_client','Wait until we are told to stop')
@@ -247,7 +250,7 @@ class HarmonyHub(polyinterface.Node):
         self.l_debug('_close_client','client={}'.format(self.client))
         if self.client is not None:
             if self.client is False:
-                self.l_debug('_close_client','no client={}'.format(self.client))
+                self.l_debug('_close_client','we have no client={}'.format(self.client))
             else:
                 try:
                     self.l_debug('_close_client','disconnecting client={}'.format(self.client))
@@ -302,7 +305,7 @@ class HarmonyHub(polyinterface.Node):
         self.l_debug('get_config','Loading hub config: {}'.format(cfile))
         try:
             with open(cfile, 'r') as infile:
-                return yaml.load(infile)
+                return yaml.load(infile, Loader=yaml.FullLoader)
         except:
             self.l_error('get_config',
                          "Unable to load hub config '{}', will load from hub which may not match current profile, please run discover again.".format(cfile), exc_info=True)

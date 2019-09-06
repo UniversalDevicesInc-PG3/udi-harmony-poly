@@ -12,7 +12,7 @@
 #
 
 import polyinterface
-import json,re,time,sys,os.path,yaml,logging,json
+import json,re,time,sys,os.path,yaml,logging,json,warnings
 from traceback import format_exception
 from copy import deepcopy
 from threading import Thread
@@ -76,6 +76,9 @@ class HarmonyController(polyinterface.Controller):
         """
         #polyinterface.LOGGER("start: This is {0} error {1}".format("an"))
         self.l_info('start','Starting')
+        # Some are getting unclosed socket warnings from sleekxmpp when thread exits that I can't get rid if so ignore them.
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*<socket.socket.*>")
+        # Set our version drivers
         self.setDriver('GV1', self.serverdata['version_major'])
         self.setDriver('GV2', self.serverdata['version_minor'])
         # Show these for now
@@ -383,7 +386,7 @@ class HarmonyController(polyinterface.Controller):
                 self.l_error('load_config','failed to open cfg={0}'.format(CONFIG),True)
                 return False
             try:
-                harmony_config = yaml.load(config_h)
+                harmony_config = yaml.load(config_h, Loader=yaml.FullLoader)
                 self.harmony_config = harmony_config
             except:
                 self.l_error('load_config','failed to parse cfg={0}'.format(CONFIG),True)
