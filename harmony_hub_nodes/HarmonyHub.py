@@ -97,6 +97,8 @@ class HarmonyHub(polyinterface.Node):
         else:
             # Just shut it down no matter what
             self.stop()
+        # In case we restart
+        self.watch_init = val
 
     def shortPoll(self):
         # Query in poll mode, or if we haven't set the current_activity yet (which happens on startup)
@@ -211,32 +213,36 @@ class HarmonyHub(polyinterface.Node):
             self.l_info("check_client","Waiting for client thread to be created..")
             return False
         else:
-            # Then client_status will be True when client is ready
-            if self.client_status is True:
-                if self.thread.isAlive():
-                    if self.client.state.current_state() == 'connected':
-                        # All seems good.
-                        # If activity method changed from or to a 2 then we need to reconnect to register or unregister the callback
-                        if self.last_activity_method != self.parent.activity_method and (self.last_activity_method == 2 or self.parent.activity_method == 2):
-                            self.l_info("check_client","Activity method changed from {0} to {1}, need to restart client".format(self.last_activity_method,self.parent.activity_method))
-                            self._set_st(0)
-                        else:
-                            self._set_st(1)
-                            return True
-                    else:
-                        self.l_error("check_client","Client no longer connected. client.state={0}".format(self.client.state.current_state()))
-                        self._close_client()
-                else:
-                    # Need to restart the thread
-                    self.l_error("check_client","Thread is dead, need to restart")
-                    self._set_st(0)
+            if self.client is None:
+                self.l_info("check_client","Client was stopped. client{0}".format(self.client))
+                self._set_st(1)
             else:
-                if self.thread.isAlive():
-                    self.l_info("check_client","Waiting for client startup to complete, status = {0}..".format(self.client_status))
-                    return False
+                # Then client_status will be True when client is ready
+                if self.client_status is True:
+                    if self.thread.isAlive():
+                        if self.client.state.current_state() == 'connected':
+                            # All seems good.
+                            # If activity method changed from or to a 2 then we need to reconnect to register or unregister the callback
+                            if self.last_activity_method != self.parent.activity_method and (self.last_activity_method == 2 or self.parent.activity_method == 2):
+                                self.l_info("check_client","Activity method changed from {0} to {1}, need to restart client".format(self.last_activity_method,self.parent.activity_method))
+                                self._set_st(0)
+                            else:
+                                self._set_st(1)
+                                return True
+                        else:
+                            self.l_error("check_client","Client no longer connected. client.state={0}".format(self.client.state.current_state()))
+                            self._close_client()
+                    else:
+                        # Need to restart the thread
+                        self.l_error("check_client","Thread is dead, need to restart")
+                        self._set_st(0)
                 else:
-                    self.l_error("check_client","Client startup thread dead?, Please send log package to developer.  status = {0}..".format(self.client_status))
-                    self._set_st(0)
+                    if self.thread.isAlive():
+                        self.l_info("check_client","Waiting for client startup to complete, status = {0}..".format(self.client_status))
+                        return False
+                    else:
+                        self.l_error("check_client","Client startup thread dead?, Please send log package to developer.  status = {0}..".format(self.client_status))
+                        self._set_st(0)
         # If we had a connection issue previously, try to fix it.
         if self.st == 0:
             self.l_debug("check_client","Calling get_client st=%d" % (self.st))
