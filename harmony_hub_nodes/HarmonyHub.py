@@ -311,7 +311,7 @@ class HarmonyHub(polyinterface.Node):
         self.l_debug('get_config','Loading hub config: {}'.format(cfile))
         try:
             with open(cfile, 'r') as infile:
-                return yaml.load(infile, Loader=yaml.FullLoader)
+                return yaml.load(infile, Loader=yaml.SafeLoader)
         except:
             self.l_error('get_config',
                          "Unable to load hub config '{}', will load from hub which may not match current profile, please run discover again.".format(cfile), exc_info=True)

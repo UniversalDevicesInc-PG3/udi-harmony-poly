@@ -386,7 +386,7 @@ class HarmonyController(polyinterface.Controller):
                 self.l_error('load_config','failed to open cfg={0}'.format(CONFIG),True)
                 return False
             try:
-                harmony_config = yaml.load(config_h, Loader=yaml.FullLoader)
+                harmony_config = yaml.load(config_h, Loader=yaml.SafeLoader)
                 self.harmony_config = harmony_config
             except:
                 self.l_error('load_config','failed to parse cfg={0}'.format(CONFIG),True)
