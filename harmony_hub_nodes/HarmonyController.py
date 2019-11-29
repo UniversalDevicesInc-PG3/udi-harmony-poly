@@ -128,11 +128,11 @@ class HarmonyController(polyinterface.Controller):
         #
         # Add Hubs from the config
         #
-        self.l_info("start","Adding known hubs...")
         self._set_num_hubs(0)
         self.first_run = False
         #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
         if self.polyConfig['nodes']:
+            self.l_info("start","Adding known hubs...")
             # Load the config info about the hubs.
             self.load_config()
             # Load the hub info.
@@ -144,6 +144,7 @@ class HarmonyController(polyinterface.Controller):
         else:
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
+            self.l_info("start","First run, will start discover...")
             self.first_run = True
             self.discover()
         self.l_info("start","done")
@@ -220,7 +221,7 @@ class HarmonyController(polyinterface.Controller):
                 discover_result = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
             except (OSError) as err:
                 self.setDriver('GV7', 9)
-                self.l_error('discover','pyharmony discover failed. May need to restart this nodeserver: {}'.format(err))
+                self.l_error('discover','pyharmony discover failed. May need to restart this nodeserver: {}'.format(err), exc_info=True)
                 return
             self.l_info('discover','harmony_discover: {0}'.format(discover_result))
         #
@@ -523,6 +524,9 @@ class HarmonyController(polyinterface.Controller):
         logging.getLogger('pyharmony').setLevel(level)
 
     def set_debug_level(self,level):
+        # First run will be None, so default is all
+        if level is None:
+            level = 0
         self.setDriver('GV4', level)
         # 0=All 10=Debug are the same because 0 (NOTSET) doesn't show everything.
         if level == 0 or level == 10:
