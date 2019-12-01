@@ -11,6 +11,8 @@
 # Value={ "name": "HarmonyHub MasterBedroom", "host": "192.168.86.80" }
 #
 
+import sys
+sys.path.insert(0,"pyharmony")
 import polyinterface
 import json,re,time,sys,os.path,yaml,logging,json,warnings
 from traceback import format_exception

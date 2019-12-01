@@ -1,4 +1,7 @@
 
+
+import sys
+sys.path.insert(0,"pyharmony")
 from pyharmony import ha_get_client
 import os,socket,struct,hashlib,re,json,logging
 
@@ -89,18 +92,18 @@ def load_hubs_file(logger):
     except (Exception) as err:
         logger.error('harmony_hub_funcs:load_hubs_file: failed to read hubs file {0}: {1}'.format(HUBS_FILE,err), exc_info=True)
         return False
-    else:         
+    else:
         return hubs
 
 def save_hubs_file(logger,hubs):
     try:
         with open(HUBS_FILE, 'w') as outfile:
-            json.dump(hubs, outfile, sort_keys=True, indent=4)     
+            json.dump(hubs, outfile, sort_keys=True, indent=4)
     except (Exception) as err:
         logger.error('harmony_hub_funcs:save_hubs_file: failed to write {0}: {1}'.format(HUBS_FILE,err), exc_info=True)
         return False
     else:
-        outfile.close()   
+        outfile.close()
     return True
 
 def get_server_data(logger):
@@ -134,4 +137,3 @@ def get_server_data(logger):
     serverdata['version_major'] = v1
     serverdata['version_minor'] = v2
     return serverdata
-
