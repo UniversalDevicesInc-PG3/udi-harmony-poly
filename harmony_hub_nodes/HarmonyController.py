@@ -139,6 +139,9 @@ class HarmonyController(polyinterface.Controller):
             self.load_config()
             # Load the hub info.
             self.load_hubs()
+            if self.hubs is False:
+                self.l_error("start","No hubs loaded, need to discover?")
+                return
             # Restore known hubs from the poly config nodes
             self.add_hubs()
             # TODO: Need check if this is necessary
