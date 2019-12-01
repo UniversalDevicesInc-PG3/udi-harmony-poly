@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 #
 
-import logging
+import logging,sys
+sys.path.insert(0,"pyharmony")
 from pyharmony import discovery as harmony_discovery
 
 logger = logging.getLogger(__name__)
