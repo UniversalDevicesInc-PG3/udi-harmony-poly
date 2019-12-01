@@ -8,7 +8,9 @@ fi
 echo ""
 if [ -e pyharmony ]; then
   echo "Updating pyharmony..."
-  git pull pyharmony
+  cd pyharmony
+  git pull
+  cd ..
 else
   git clone https://github.com/jimboca/pyharmony.git
 fi

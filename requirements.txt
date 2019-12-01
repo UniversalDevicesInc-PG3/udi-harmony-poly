@@ -1,3 +1,3 @@
 polyinterface >= 2.0.15
 pyaml
-pyharmony     == 1.0.20
+#pyharmony     == 1.0.20
