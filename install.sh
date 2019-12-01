@@ -5,5 +5,12 @@ if ! pip3 install -r requirements.txt --user; then
   exit 1
 fi
 
-./write_profile.py
+echo ""
+if [ -e pyharmony ]; then
+  echo "Updating pyharmony..."
+  git pull pyharmony
+else
+  git clone https://github.com/jimboca/pyharmony.git
+fi
 
+./write_profile.py

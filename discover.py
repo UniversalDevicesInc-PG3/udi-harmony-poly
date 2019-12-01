@@ -12,5 +12,5 @@ logging.basicConfig(
 logger.setLevel(logging.DEBUG)
 harmony_discovery.logger = logger
 res = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
-harmony_discovery.discover.listen_socket.close()
+#harmony_discovery.discover.listen_socket.close()
 print(res)
