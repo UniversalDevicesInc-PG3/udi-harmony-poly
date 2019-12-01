@@ -142,6 +142,8 @@ Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
 # Release Notes
+- 2.2.6: 12/01/2019
+  - Fix pyharmony to work on PolyIsy which it currently pulls from my github
 - 2.2.5: 10/16/2019
   - Change pyaml to SafeLoader from FullLoader since latest pyaml is not available for all.
 - 2.2.4: 09/22/2019
