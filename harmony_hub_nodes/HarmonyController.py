@@ -19,9 +19,6 @@ from threading import Thread
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_funcs import id_to_address,get_valid_node_name,long2ip,get_server_data,load_hubs_file,save_hubs_file
 from write_profile import write_profile
-# Local version of pyharmony with discover fix for freebsd
-import sys
-sys.path.insert(0,"pyharmony")
 
 LOGGER = polyinterface.LOGGER
 CONFIG = "config.yaml"
@@ -218,6 +215,7 @@ class HarmonyController(polyinterface.Controller):
             discover_result = list()
         else:
             self.l_info('discover','harmony_discover: starting...')
+            sys.path.insert(0,"pyharmony")
             from pyharmony import discovery as harmony_discovery
             harmony_discovery.logger = LOGGER
             try:
