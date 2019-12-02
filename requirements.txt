@@ -1,4 +1,5 @@
 polyinterface
 pyaml
-#pyharmony     == 1.0.20
+#pyharmony     == 1.0.21
+sleekxmpp
 netifaces
