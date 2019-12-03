@@ -2,5 +2,4 @@ polyinterface
 pyaml
 #pyharmony     == 1.0.21
 sleekxmpp
-# Locked because Polisy doesn't have a C compiler so we dont' want it to try and update
-netifaces == 0.10.9
+netifaces
