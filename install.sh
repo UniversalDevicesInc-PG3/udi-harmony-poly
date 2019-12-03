@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
-if ! pip3 install -r requirements.txt --user; then
+rf=requirements.txt
+if [ -f /usr/local/etc/pkg/repos/udi.conf ]; then
+  rf=requirements_polisy.txt
+fi
+echo "Using: $rf"
+if ! pip3 install -r $rf --user; then
   echo "ERROR: pip3 failed, see above"
   exit 1
 fi
