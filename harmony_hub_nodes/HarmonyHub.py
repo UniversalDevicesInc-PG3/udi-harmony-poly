@@ -3,7 +3,7 @@ import polyinterface,sys,logging,yaml
 from traceback import format_exception
 from threading import Thread,Event
 from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
-from harmony_hub_funcs import ip2long,long2ip,get_valid_node_name
+from harmony_hub_funcs import ip2long,long2ip,get_valid_node_name,get_file
 from pyharmony import client as harmony_client
 from sleekxmpp.exceptions import IqError, IqTimeout
 
@@ -307,7 +307,7 @@ class HarmonyHub(polyinterface.Node):
         # FIXME: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
         # FIXME: But config.yaml doesn't say which activities go with which hub...
         # Read the config if available.
-        cfile = self.address + ".yaml"
+        cfile = get_file(self.address + '.yaml')
         self.l_debug('get_config','Loading hub config: {}'.format(cfile))
         try:
             with open(cfile, 'r') as infile:

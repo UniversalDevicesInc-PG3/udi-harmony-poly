@@ -120,24 +120,24 @@ def write_config_file(logger,config_data):
 def load_config_file(logger):
     config = get_file(logger,CONFIG_FILE)
     if os.path.exists(config):
-        self.l_info('load_config','Loading Harmony config {}'.format(config))
+        logger.info('load_config: Loading Harmony config {}'.format(config))
         try:
             config_h = open(config, 'r')
         except:
-            self.l_error('load_config','failed to open cfg={0}'.format(config),True)
+            logger.error('load_config: failed to open cfg={0}'.format(config),exc_info=True)
             return False
         harmony_config = False
         try:
             harmony_config = yaml.load(config_h, Loader=yaml.SafeLoader)
         except:
-            self.l_error('load_config','failed to parse cfg={0}'.format(config),True)
+            logger.error('load_config: failed to parse cfg={0}'.format(config),exc_info=True)
             return False
         finally:
             # This is always executed.
             config_h.close()
         return harmony_config
     else:
-        self.l_error('load_config','Harmony config does not exist {}'.format(config))
+        logger.error('load_config: Harmony config does not exist {}'.format(config))
 
 #
 # We need a hubs file because write_profile is run  on install
