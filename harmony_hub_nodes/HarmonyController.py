@@ -384,7 +384,7 @@ class HarmonyController(polyinterface.Controller):
         self.hubs = list()
 
     def load_config(self):
-        self.harmony_config = load_config_file(logger)
+        self.harmony_config = load_config_file(LOGGER)
 
     def delete(self):
         """
