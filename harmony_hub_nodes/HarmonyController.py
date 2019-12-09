@@ -19,11 +19,10 @@ from traceback import format_exception
 from copy import deepcopy
 from threading import Thread
 from harmony_hub_nodes import HarmonyHub
-from harmony_hub_funcs import id_to_address,get_valid_node_name,long2ip,get_server_data,load_hubs_file,save_hubs_file
+from harmony_hub_funcs import *
 from write_profile import write_profile
 
 LOGGER = polyinterface.LOGGER
-CONFIG = "config.yaml"
 
 class HarmonyController(polyinterface.Controller):
     """
@@ -385,24 +384,7 @@ class HarmonyController(polyinterface.Controller):
         self.hubs = list()
 
     def load_config(self):
-        if os.path.exists(CONFIG):
-            self.l_info('load_config','Loading Harmony config {}'.format(CONFIG))
-            try:
-                config_h = open(CONFIG, 'r')
-            except:
-                self.l_error('load_config','failed to open cfg={0}'.format(CONFIG),True)
-                return False
-            try:
-                harmony_config = yaml.load(config_h, Loader=yaml.SafeLoader)
-                self.harmony_config = harmony_config
-            except:
-                self.l_error('load_config','failed to parse cfg={0}'.format(CONFIG),True)
-                return False
-            finally:
-                # This is always executed.
-                config_h.close()
-        else:
-            self.l_error('load_config','Harmony config does not exist {}'.format(CONFIG))
+        self.harmony_config = load_config_file(logger)
 
     def delete(self):
         """

@@ -3,12 +3,31 @@
 import sys
 sys.path.insert(0,"pyharmony")
 from pyharmony import ha_get_client
-import os,socket,struct,hashlib,re,json,logging
+import os,socket,struct,hashlib,re,json,logging,yaml
+
+CONFIG_DIR = "config"
 
 logging.getLogger('sleekxmpp').setLevel(logging.INFO)
 logging.getLogger('requests').setLevel(logging.INFO)
 logging.getLogger('urllib3').setLevel(logging.INFO)
 logging.getLogger('pyharmony').setLevel(logging.INFO)
+
+# Geth file in config dir, move if it currently exists.
+def get_file(logger,fname):
+    fpath = CONFIG_DIR + "/" + fname
+    if not os.path.exists(CONFIG_DIR):
+        try:
+            os.mkdir(CONFIG_DIR)
+        except (Exception) as err:
+            logger.error("Unable to mkdir {}: {}".format(CONFIG_DIR,err))
+    if os.path.exists(fname):
+        logger.debug("Moving {} -> {}".format(fname,fpath))
+        try:
+            os.rename(fname,fpath)
+        except (Exception) as err:
+            logger.error("Unable to rename {} -> {}: {}".format(fname,fpath,err))
+    logger.debug('get_file: {} = {}'.format(fname,fpath))
+    return fpath
 
 def myint(value):
     """ round and convert to int """
@@ -82,25 +101,68 @@ def get_valid_node_name(name):
     # Remove <>`~!@#$%^&*(){}[]?/\;:"'` characters from name
     return re.sub(r"[<>`~!@#$%^&*(){}[\]?/\\;:\"']+", "", name)
 
+#
+# Routines are here because they are used in write_profile.py
+#
+CONFIG_FILE = "config.yaml"
+
+def write_config_file(logger,config_data):
+    fpath = get_file(logger,CONFIG_FILE)
+    try:
+        with open(fpath, 'w') as outfile:
+            yaml.dump(config_data, outfile, default_flow_style=False)
+            outfile.close()
+    except (Exception) as err:
+        logger.error('harmony_hub_funcs:write_config_file: failed to write {0}: {1}'.format(fpath,err))
+        return False
+    return True
+
+def load_config_file(logger):
+    config = get_file(logger,CONFIG_FILE)
+    if os.path.exists(config):
+        self.l_info('load_config','Loading Harmony config {}'.format(config))
+        try:
+            config_h = open(config, 'r')
+        except:
+            self.l_error('load_config','failed to open cfg={0}'.format(config),True)
+            return False
+        harmony_config = False
+        try:
+            harmony_config = yaml.load(config_h, Loader=yaml.SafeLoader)
+        except:
+            self.l_error('load_config','failed to parse cfg={0}'.format(config),True)
+            return False
+        finally:
+            # This is always executed.
+            config_h.close()
+        return harmony_config
+    else:
+        self.l_error('load_config','Harmony config does not exist {}'.format(config))
+
+#
+# We need a hubs file because write_profile is run  on install
+#
 HUBS_FILE = 'hubs.json'
 
 def load_hubs_file(logger):
+    fpath = get_file(logger,HUBS_FILE)
     try:
-        with open(HUBS_FILE) as data:
+        with open(fpath) as data:
             hubs = json.load(data)
             data.close()
     except (Exception) as err:
-        logger.error('harmony_hub_funcs:load_hubs_file: failed to read hubs file {0}: {1}'.format(HUBS_FILE,err), exc_info=True)
+        logger.error('harmony_hub_funcs:load_hubs_file: failed to read hubs file {0}: {1}'.format(fpath,err))
         return False
     else:
         return hubs
 
 def save_hubs_file(logger,hubs):
+    fpath = get_file(logger,HUBS_FILE)
     try:
-        with open(HUBS_FILE, 'w') as outfile:
+        with open(fpath, 'w') as outfile:
             json.dump(hubs, outfile, sort_keys=True, indent=4)
     except (Exception) as err:
-        logger.error('harmony_hub_funcs:save_hubs_file: failed to write {0}: {1}'.format(HUBS_FILE,err), exc_info=True)
+        logger.error('harmony_hub_funcs:save_hubs_file: failed to write {0}: {1}'.format(fpath,err))
         return False
     else:
         outfile.close()

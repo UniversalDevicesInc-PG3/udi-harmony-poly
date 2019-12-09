@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 
 import yaml,collections,re,os,zipfile
-from harmony_hub_funcs import harmony_hub_client,get_server_data,load_hubs_file
+from harmony_hub_funcs import harmony_hub_client,get_server_data,load_hubs_file,get_file,write_config_file
 
 pfx = "write_profile:"
 
-config_file_name = 'config.yaml'
-hubs_file_name = 'hubs.json'
 VERSION_FILE = "profile/version.txt"
 
-#config_file = open(config_file_name, 'r')
-#config_data = yaml.load(config_file)
-#config_file.close
 
 # TODO: Check that server node & name are defined.
 #if 'server' in config and config['host'] is not None:
@@ -133,7 +128,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
         #
         # Build or load the config file.
         #
-        harmony_config_file = address + ".yaml"
+        harmony_config_file = get_file(logger,address + ".yaml")
         #
         # Building a new config
         #
@@ -255,9 +250,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
     editor.close()
     nls.close()
 
-    with open(config_file_name, 'w') as outfile:
-        yaml.dump(config_data, outfile, default_flow_style=False)
-    outfile.close()
+    write_config_file(logger,config_data)
 
     with open(VERSION_FILE, 'w') as outfile:
         outfile.write(sd['profile_version'])
