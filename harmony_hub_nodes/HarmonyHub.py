@@ -307,7 +307,7 @@ class HarmonyHub(polyinterface.Node):
         # FIXME: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
         # FIXME: But config.yaml doesn't say which activities go with which hub...
         # Read the config if available.
-        cfile = get_file(self.address + '.yaml')
+        cfile = get_file(LOGGER,self.address + '.yaml')
         self.l_debug('get_config','Loading hub config: {}'.format(cfile))
         try:
             with open(cfile, 'r') as infile:
