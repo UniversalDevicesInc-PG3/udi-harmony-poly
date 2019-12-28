@@ -11,14 +11,13 @@ This node server is intended to support the [Logitech Harmony Hub](http://www.lo
 
 ## Installation
 
-WARNING: If you are running the v1 polyglot harmony nodeserver it will not longer work after this one is installed.  But, initially I would advise everyone to install this in a new slot and leave the old one running.  If you go back to the old one you will need manually re-install the older version of pyharmony if you have polyglot v1 and v2 running on the same machine.
-
 IMPORTANT: The latest harmony hub firmware broke access, you must manually enable xmpp for each hub in the Harmony App:  https://community.logitech.com/s/question/0D55A00008D4bZ4SAJ/harmony-hub-firmware-update-fixes-vulnerabilities
-    - Connect to one of your Hubs in the Harmony App
-    - Select Menu -> Harmony Setup -> Add/Edit Devices & Activities
-    - Select Remote & Hub -> Enable XMPP
-     - Do this for every hub.
+  - Connect to one of your Hubs in the Harmony App
+  - Select Menu -> Harmony Setup -> Add/Edit Devices & Activities
+  - Select Remote & Hub -> Enable XMPP
+  - Do this for every hub.
 
+WARNING: If you are running the v1 polyglot harmony nodeserver it will not longer work after this one is installed.  But, initially I would advise everyone to install this in a new slot and leave the old one running.  If you go back to the old one you will need manually re-install the older version of pyharmony if you have polyglot v1 and v2 running on the same machine.
 
 1. Make sure your Harmony Hubs have a static IP assigned.  The nodeserver can not re-find the hub if it changes IP addresses.  This may be fixed in the future.
 2. Backup Your ISY in case of problems!
