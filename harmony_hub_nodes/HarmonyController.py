@@ -246,21 +246,23 @@ class HarmonyController(polyinterface.Controller):
                 # Get the customParam value which is json code
                 #  { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
                 cfg = self.polyConfig['customParams'][param]
+                cfgd = None
                 try:
                     cfgd = json.loads(cfg)
                 except:
                     err = sys.exc_info()[0]
                     self.l_error('discover','failed to parse cfg={0} Error: {1}'.format(cfg,err))
-                # Check that name and host are defined.
-                addit = True
-                if not 'name' in cfgd:
-                    self.l_error('discover','No name in customParam {0} value={1}'.format(param,cfg))
-                    addit = False
-                if not 'host' in cfgd:
-                    self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
-                    addit = False
-                if addit:
-                    self.hubs.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
+                if cfgd not None:
+                    # Check that name and host are defined.
+                    addit = True
+                    if not 'name' in cfgd:
+                        self.l_error('discover','No name in customParam {0} value={1}'.format(param,cfg))
+                        addit = False
+                    if not 'host' in cfgd:
+                        self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
+                        addit = False
+                    if addit:
+                        self.hubs.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
 
         #
         # Next the discovered ones
