@@ -252,7 +252,7 @@ class HarmonyController(polyinterface.Controller):
                 except:
                     err = sys.exc_info()[0]
                     self.l_error('discover','failed to parse cfg={0} Error: {1}'.format(cfg,err))
-                if cfgd not None:
+                if cfgd is not None:
                     # Check that name and host are defined.
                     addit = True
                     if not 'name' in cfgd:
