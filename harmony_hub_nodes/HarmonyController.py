@@ -210,6 +210,7 @@ class HarmonyController(polyinterface.Controller):
         #
         self.setDriver('GV7', 2)
         auto_discover = self.getDriver('GV8')
+        discover_result = None
         if auto_discover is None:
             auto_discover = 1
         else:
@@ -227,7 +228,6 @@ class HarmonyController(polyinterface.Controller):
             except (OSError) as err:
                 self.setDriver('GV7', 9)
                 self.l_error('discover','pyharmony discover failed. May need to restart this nodeserver: {}'.format(err), exc_info=True)
-                return
             self.l_info('discover','harmony_discover: {0}'.format(discover_result))
         #
         # Add the nodes
@@ -239,10 +239,11 @@ class HarmonyController(polyinterface.Controller):
         for param in self.polyConfig['customParams']:
             # Look for customParam starting with hub_
             match = re.match( "hub_(.*)", param, re.I)
+            self.l_info('discover','param={} match={}'.format(param,match))
             if match is not None:
                 # The hub address is everything following the hub_
                 address = match.group(1)
-                self.l_info('discover','got param {0} address={1}'.format(param,address))
+                self.l_info('discover','process param={0} address={1}'.format(param,address))
                 # Get the customParam value which is json code
                 #  { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
                 cfg = self.polyConfig['customParams'][param]
@@ -267,28 +268,29 @@ class HarmonyController(polyinterface.Controller):
         #
         # Next the discovered ones
         #
-        for config in discover_result:
-            addit = True
-            if 'current_fw_version' in config:
-                if config['current_fw_version'] == '4.15.206':
-                    self.l_error('discover','current_fw_version={} which is not supported.  See: {}'.
-                    format(
-                        config['current_fw_version'],
-                        'https://community.logitech.com/s/question/0D55A00008D4bZ4SAJ/harmony-hub-firmware-update-fixes-vulnerabilities'
-                    ))
-                    addit = False
-            else:
-                self.l_error('discover','current_fw_version not in config?  Will try to use anyway {}'.format(config))
-            if addit:
-                self.hubs.append(
-                    {
-                        'address': 'h'+id_to_address(config['uuid'],13),
-                        'name':    get_valid_node_name(config['friendlyName']),
-                        'host':    config['ip'],
-                        'port':    config['port'],
-                        'save':    True
-                    }
-                )
+        if discover_result is not None:
+            for config in discover_result:
+                addit = True
+                if 'current_fw_version' in config:
+                    if config['current_fw_version'] == '4.15.206':
+                        self.l_error('discover','current_fw_version={} which is not supported.  See: {}'.
+                        format(
+                            config['current_fw_version'],
+                            'https://community.logitech.com/s/question/0D55A00008D4bZ4SAJ/harmony-hub-firmware-update-fixes-vulnerabilities'
+                        ))
+                        addit = False
+                else:
+                    self.l_error('discover','current_fw_version not in config?  Will try to use anyway {}'.format(config))
+                if addit:
+                    self.hubs.append(
+                        {
+                            'address': 'h'+id_to_address(config['uuid'],13),
+                            'name':    get_valid_node_name(config['friendlyName']),
+                            'host':    config['ip'],
+                            'port':    config['port'],
+                            'save':    True
+                        }
+                    )
         #
         # Build the profile
         # It needs the hub_list set, so we will reset it later.
