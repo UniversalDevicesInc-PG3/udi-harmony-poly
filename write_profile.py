@@ -218,7 +218,8 @@ def write_profile(logger,hub_list,poll_hubs=True):
                             warn_string_1 += " device %s has button with label=%s, command=%s\n" % (d['label'],f['label'],ay['command'])
                         #nls.write("# Button name: %s, label: %s\n" % (f['name'], f['label']))
                         # This is the list of button numbers in this device.
-                        subset.append(cb)
+                        if not cb in subset:
+                            subset.append(cb)
             #
             # Turn the list of button numbers, into a compacted subset string for the editor.
             #
