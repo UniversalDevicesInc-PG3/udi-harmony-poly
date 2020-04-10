@@ -139,10 +139,9 @@ def write_profile(logger,hub_list,poll_hubs=True):
     #
     # Loop over each Hub in the config data.
     #
-    warn_string_1 = ""
+    first_hub = True
     if len(hub_list) == 0:
         logger.error("{0} Hub list is empty?".format(pfx))
-    first_hub = True
     for ahub in hub_list:
         #
         # Process this hub.
@@ -245,8 +244,6 @@ def write_profile(logger,hub_list,poll_hubs=True):
                         else:
                             logger.debug('  Using existing function %s index=%d',functions[index],index)
                         logger.debug("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, index, f['name'], f['label'], ay['command']))
-                        if fname != f['name']:
-                            warn_string_1 += " device %s has button with label=%s, command=%s\n" % (d['label'],f['label'],ay['command'])
                         #nls.write("# Button name: %s, label: %s\n" % (f['name'], f['label']))
                         # This is the list of button numbers in this device.
                         if not index in subset:
@@ -329,4 +326,4 @@ if __name__ == "__main__":
             if hubs is False:
                 logger.error('{0} Unable to load hubs file which does not exist on first run or before 2.1.0, please run Build Profile in admin console after restarting this nodeserver'.format(pfx))
             else:
-                write_profile(logger,hubs,False)
+                write_profile(logger,hubs)

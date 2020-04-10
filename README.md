@@ -145,6 +145,8 @@ Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
 # Release Notes
+- 2.3.0 04/10/2020
+  - [Activity and/or Devices orders are not remembered when new ones are added](https://github.com/jimboca/udi-harmony-poly/issues/23)
 - 2.2.12: 04/09/2020
   - Fix crash when discover failed to find a hub
   - Fix duplicate Functions that cause problem LG TV's
