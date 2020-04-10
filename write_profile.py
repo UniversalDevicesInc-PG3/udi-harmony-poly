@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import yaml,collections,re,os,zipfile
-from harmony_hub_funcs import harmony_hub_client,get_server_data,load_hubs_file,get_file,write_config_file
+from harmony_hub_funcs import harmony_hub_client,get_server_data,load_hubs_file,get_file,CONFIG_FILE,load_config_file,write_config_file,get_file
 
 pfx = "write_profile:"
 
@@ -71,12 +71,54 @@ ND-%s-ICON = Input
 # The NLS entry for each indexed item
 NLS_TMPL = "%s-%d = %s\n"
 
+#
+# Turn the list of button numbers, into a compacted subset string for the editor.
+#
+def reduce_subset(subset):
+    subset_str = ""
+    subset.sort()
+    full_string = ",".join(map(str,subset))
+    while len(subset) > 0:
+        x = subset.pop(0)
+        if subset_str != "":
+            subset_str += ","
+        subset_str += str(x)
+        if len(subset) > 0 and x == subset[0] - 1:
+            y = subset.pop(0)
+            while len(subset) > 0 and (y == subset[0] or y == subset[0] - 1):
+                y = subset.pop(0)
+            subset_str += "-" + str(y)
+    return { 'full_string': full_string, 'subset_string': subset_str }
+
 def write_profile(logger,hub_list,poll_hubs=True):
     config_data = {}
     sd = get_server_data(logger)
     if sd is False:
         logger.error("Unable to complete without server data...")
         return False
+    #
+    # Initialize or Load config data
+    #
+    config_data = False
+    config_file = get_file(logger,CONFIG_FILE)
+    if os.path.exists(config_file):
+        logger.info('Loading config: %s', CONFIG_FILE)
+        config_data = load_config_file(logger)
+        if config_data is False:
+            logger.error("FAiLED to load config file, will have to regenrate...")
+    if config_data is False:
+        logger.info('Initializing config data')
+        config_data = dict()
+        config_data['info'] = dict()
+        config_data['info']['activities'] = list()
+        config_data['info']['functions'] = list()
+    # References to internal data structures
+    activities = config_data['info']['activities']
+    functions  = config_data['info']['functions']
+    # Activity 0 is always power off
+    if len(activities) == 0:
+        logger.info("Initializing Activities List...")
+        activities.append({'label':'Power Off','id':-1});
     #
     # Start the nls with the template data.
     #
@@ -95,24 +137,12 @@ def write_profile(logger,hub_list,poll_hubs=True):
     editor.write("<editors>\n")
 
     #
-    # This is all the activities available for all hubs.
-    #
-    activites = collections.OrderedDict()
-    ai = 0
-    #
-    # This is all the button functions available for all devices.
-    #
-    buttons = collections.OrderedDict()
-    bi = 0
-    #
     # Loop over each Hub in the config data.
     #
-    config_data['info'] = dict()
-    config_data['info']['activities'] = list()
-    config_data['info']['functions'] = list()
     warn_string_1 = ""
     if len(hub_list) == 0:
         logger.error("{0} Hub list is empty?".format(pfx))
+    first_hub = True
     for ahub in hub_list:
         #
         # Process this hub.
@@ -136,7 +166,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
             logger.debug('{} Loading hub config: {}'.format(pfx,harmony_config_file))
             try:
                 with open(harmony_config_file, 'r') as infile:
-                    harmony_config = yaml.load(infile)
+                    harmony_config = yaml.load(infile,Loader=yaml.FullLoader)
             except:
                 logger.error("{} Error loading config {} will poll hub".format(pfx,harmony_config_file),True)
                 poll_hubs = True
@@ -158,29 +188,31 @@ def write_profile(logger,hub_list,poll_hubs=True):
         # Build the activities
         #
         # PowerOff is always first
-        ais = ai
         nls.write("# The index number is the matching list info->activities index\n")
         nls.write("# The activity id's are uniq across all hubs so we share the same list\n")
-        nls.write(NLS_TMPL % (address.upper(), 0, 'Power Off'))
-        if ais == 0:
-            config_data['info']['activities'].append({'label':'Power Off','id':-1});
-            ai += 1
+        subset = list()
+        if first_hub:
+            nls.write(NLS_TMPL % (address.upper(), 0, activities[0]['label']))
+        subset.append(0)
         for a in harmony_config['activity']:
             # Skip -1 since we printed it already.
             if int(a['id']) != -1:
                 # Print the Harmony Activities to the log
                 logger.debug("%s Activity: %s  Id: %s" % (pfx, a['label'], a['id']))
-                #aname = "%s (%s)" % (a['label'],a['id'])
                 aname = str(a['label'])
-                config_data['info']['activities'].append({'label':aname,'id':int(a['id'])});
-                nls.write(NLS_TMPL % (address.upper(), ai, aname))
-                ai += 1
-        # All activities contain zero which is power off...
-        if ais == 0:
-            subset = "%d-%d" % (ais, ai-1)
-        else:
-            subset = "0,%d-%d" % (ais, ai-1)
-        editor.write(EDITOR_TMPL_S % ('Act'+address, subset,address.upper()))
+                id = int(a['id'])
+                index = next((index for (index, d) in enumerate(activities) if d['id'] == id), None)
+                if index is None:
+                    index = len(activities)
+                    logger.debug('  Adding as new activity %d', index)
+                    activities.append({'label':aname,'id':int(a['id'])});
+                else:
+                    logger.debug('  Using existing activity %s index=%d',activities[index],index)
+                nls.write(NLS_TMPL % (address.upper(), index, aname))
+                # This is the list of button numbers in this device.
+                subset.append(index)
+        s = reduce_subset(subset)
+        editor.write(EDITOR_TMPL_S % ('Act'+address, s['subset_string'],address.upper()))
         #
         # Build all the devices
         #
@@ -199,50 +231,35 @@ def write_profile(logger,hub_list,poll_hubs=True):
                 for f in cg['function']:
                     a = f['action'].replace('\\/','/')
                     try:
-                        ay = yaml.load(a)
+                        ay = yaml.load(a,Loader=yaml.FullLoader)
                     except (Exception) as err:
                         logger.error('{0} failed to parse string: {1}'.format(pfx,err))
                     else:
-                        bname = f['name']
-                        if not bname in buttons:
-                            cb = bi
-                            buttons[bname] = bi
-                            bi += 1
-                            config_data['info']['functions'].append({'label':str(f['label']),'name':str(f['name']),'command':{str(d['id']):str(ay['command'])}});
+                        fname = f['name']
+                        index = next((index for (index, d) in enumerate(functions) if d['name'] == fname), None)
+                        if index is None:
+                            index = len(functions)
+                            logger.debug('  Adding as new function %d', index)
+                            functions.append({'label':str(f['label']),'name':fname,'command':{str(d['id']):str(ay['command'])}});
+                            config_data['info']['functions'][index]['command'][str(d['id'])] = ay['command']
                         else:
-                            cb = buttons[bname]
-                            config_data['info']['functions'][cb]['command'][str(d['id'])] = ay['command']
-                        logger.debug("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, cb, f['name'], f['label'], ay['command']))
-
-                        if bname != f['name']:
+                            logger.debug('  Using existing function %s index=%d',functions[index],index)
+                        logger.debug("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, index, f['name'], f['label'], ay['command']))
+                        if fname != f['name']:
                             warn_string_1 += " device %s has button with label=%s, command=%s\n" % (d['label'],f['label'],ay['command'])
                         #nls.write("# Button name: %s, label: %s\n" % (f['name'], f['label']))
                         # This is the list of button numbers in this device.
-                        if not cb in subset:
-                            subset.append(cb)
-            #
-            # Turn the list of button numbers, into a compacted subset string for the editor.
-            #
-            subset_str = ""
-            subset.sort()
+                        if not index in subset:
+                            subset.append(index)
+            s = reduce_subset(subset)
             editor.write("\n  <!-- === %s -->\n" % info)
-            editor.write("  <!-- full subset = %s -->" % ",".join(map(str,subset)))
-            while len(subset) > 0:
-                x = subset.pop(0)
-                if subset_str != "":
-                    subset_str += ","
-                subset_str += str(x)
-                if len(subset) > 0 and x == subset[0] - 1:
-                    y = subset.pop(0)
-                    while len(subset) > 0 and (y == subset[0] or y == subset[0] - 1):
-                        y = subset.pop(0)
-                    subset_str += "-" + str(y)
-            editor.write(EDITOR_TMPL_S % ('Btn' + d['id'], subset_str, 'BTN'))
+            editor.write("  <!-- full subset = %s -->" % s['full_string'])
+            editor.write(EDITOR_TMPL_S % ('Btn' + d['id'], s['subset_string'], 'BTN'))
 
 
     nls.write("\n\n")
-    for key in buttons:
-        nls.write(NLS_TMPL % ('BTN', buttons[key], key))
+    for (index, d) in enumerate(functions):
+        nls.write(NLS_TMPL % ('BTN', index, d['name']))
 
     editor.write("</editors>")
     nodedef.write("</nodeDefs>")
@@ -251,13 +268,15 @@ def write_profile(logger,hub_list,poll_hubs=True):
     editor.close()
     nls.close()
 
+    # Don't need zip file anymore
+    if os.path.exists('profile.zip'):
+        os.remove('profile.zip')
+
     write_config_file(logger,config_data)
 
     with open(VERSION_FILE, 'w') as outfile:
         outfile.write(sd['profile_version'])
     outfile.close()
-
-    write_profile_zip(logger)
 
     logger.info(pfx + " done.")
 
@@ -309,9 +328,5 @@ if __name__ == "__main__":
             hubs = load_hubs_file(logger)
             if hubs is False:
                 logger.error('{0} Unable to load hubs file which does not exist on first run or before 2.1.0, please run Build Profile in admin console after restarting this nodeserver'.format(pfx))
-                # If no profile.zip exist, then generate it.
-                if not os.path.exists('profile.zip'):
-                    logger.info('{0}: Generating default profile.zip')
-                    write_profile_zip(logger)
             else:
-                write_profile(logger,hubs)
+                write_profile(logger,hubs,False)
