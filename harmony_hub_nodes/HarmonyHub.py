@@ -334,9 +334,10 @@ class HarmonyHub(polyinterface.Node):
         # Check if we still have them.
         for node in nodes:
             if node['primary'] == self.address:
+                LOGGER.info("Checking: %s",node)
                 address = node['address']
                 if node['address'] == self.address:
-                    # It's me!
+                    # It's me
                     pass
                 elif node['nodedef'] == 'HarmonyActivity':
                     # Activity address is the id with 'a' prefix.
