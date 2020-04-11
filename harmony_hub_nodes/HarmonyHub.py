@@ -55,6 +55,7 @@ class HarmonyHub(polyinterface.Node):
         self.thread = None
         self.client_status = None
         self.event  = None
+        self.config = None
         self.st     = 0
         # Can't poll until start runs.
         self.do_poll = False
@@ -113,7 +114,7 @@ class HarmonyHub(polyinterface.Node):
         if self.watch:
             self.check_client()
         # Clean out old nodes
-        self.deleted_check(harmony_config)
+        self.deleted_check(self.get_config())
 
     def query(self):
         """
@@ -307,18 +308,20 @@ class HarmonyHub(polyinterface.Node):
             return self.setDriver('ST', self.st)
 
     def get_config(self):
-        # FIXME: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
-        # FIXME: But config.yaml doesn't say which activities go with which hub...
-        # Read the config if available.
-        cfile = get_file(LOGGER,self.address + '.yaml')
-        self.l_debug('get_config','Loading hub config: {}'.format(cfile))
-        try:
-            with open(cfile, 'r') as infile:
-                return yaml.load(infile, Loader=yaml.SafeLoader)
-        except:
-            self.l_error('get_config',
-                         "Unable to load hub config '{}', will load from hub which may not match current profile, please run discover again.".format(cfile), exc_info=True)
-        return self.client.get_config()
+        if self.config is None:
+            # FIXME: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
+            # FIXME: But config.yaml doesn't say which activities go with which hub...
+            # Read the config if available.
+            cfile = get_file(LOGGER,self.address + '.yaml')
+            self.l_debug('get_config','Loading hub config: {}'.format(cfile))
+            try:
+                with open(cfile, 'r') as infile:
+                    return yaml.load(infile, Loader=yaml.SafeLoader)
+            except:
+                self.l_error('get_config',
+                             "Unable to load hub config '{}', will load from hub which may not match current profile, please run discover again.".format(cfile), exc_info=True)
+            self.config = self.client.get_config()
+        return self.config
 
     def deleted_check(self,config):
         #
@@ -331,30 +334,34 @@ class HarmonyHub(polyinterface.Node):
         # Check if we still have them.
         for node in nodes:
             if node['primary'] == self.address:
+                address = node['address']
                 if node['address'] == self.address:
                     # It's me!
                     pass
                 elif node['nodedef'] == 'HarmonyActivity':
                     # Activity address is the id with 'a' prefix.
-                    id = int(node['address'][1:])
-                    LOGGER.debug('Check if Activity %s "%s" id=%s still exists',node['address'],node['name'],id)
+                    id = int(address[1:])
+                    #LOGGER.debug('Check if Activity %s "%s" id=%s still exists',node['address'],node['name'],id)
                     index = next((index for (index, d) in enumerate(config['activity']) if int(d['id']) == id), None)
-                    LOGGER.debug(' Got: %s',index)
+                    #LOGGER.debug(' Got: %s',index)
                     if index is None:
-                        LOGGER.debug(' Deleting...')
+                        LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'],id)
+                        self.controller.poly.delNode(address)
                 else:
                     # Must be a device d\d+
                     id = int(node['nodedef'][1:])
-                    LOGGER.debug('Check if Device %s "%s" id=%s still exists',node['address'],node['name'],id)
+                    #LOGGER.debug('Check if Device %s "%s" id=%s still exists',node['address'],node['name'],id)
                     index = next((index for (index, d) in enumerate(config['device']) if int(d['id']) == id), None)
-                    LOGGER.debug(' Got: %s',index)
+                    #LOGGER.debug(' Got: %s',index)
                     if index is None:
-                        LOGGER.debug(' Deleting...')
+                        LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'],id)
+                        self.controller.poly.delNode(address)
 
     def init_activities_and_devices(self):
         self.l_info("init_activities_and_devices","start")
         self.activity_nodes = dict()
         self.device_nodes = dict()
+        self.config = None # Force reloading of config
         harmony_config = self.get_config()
         #harmony_config = self.parent.harmony_config['info']
         #
