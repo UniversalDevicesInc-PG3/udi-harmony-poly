@@ -114,7 +114,7 @@ class HarmonyHub(polyinterface.Node):
         if self.watch:
             self.check_client()
         # Clean out old nodes
-        self.deleted_check(self.get_config())
+        #self.deleted_check(self.get_config())
 
     def query(self):
         """
