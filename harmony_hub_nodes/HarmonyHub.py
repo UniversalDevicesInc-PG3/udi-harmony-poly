@@ -6,6 +6,7 @@ from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
 from harmony_hub_funcs import ip2long,long2ip,get_valid_node_name,get_file
 from pyharmony import client as harmony_client
 from sleekxmpp.exceptions import IqError, IqTimeout
+from copy import deepcopy
 
 LOGGER = polyinterface.LOGGER
 
@@ -111,6 +112,8 @@ class HarmonyHub(polyinterface.Node):
         #self.l_debug('longPoll','watch={} client_status={}'.format(self.watch,self.client_status))
         if self.watch:
             self.check_client()
+        # Clean out old nodes
+        self.deleted_check(harmony_config)
 
     def query(self):
         """
@@ -316,6 +319,37 @@ class HarmonyHub(polyinterface.Node):
             self.l_error('get_config',
                          "Unable to load hub config '{}', will load from hub which may not match current profile, please run discover again.".format(cfile), exc_info=True)
         return self.client.get_config()
+
+    def deleted_check(self,config):
+        #
+        # Check for removed activities or devices
+        #
+        # This can change while we are checking if another hub is being added...
+        #LOGGER.debug("%s",self.controller.poly.config)
+        # These are all the nodes in the config...
+        nodes = self.controller.poly.config['nodes'].copy()
+        # Check if we still have them.
+        for node in nodes:
+            if node['primary'] == self.address:
+                if node['address'] == self.address:
+                    # It's me!
+                    pass
+                elif node['nodedef'] == 'HarmonyActivity':
+                    # Activity address is the id with 'a' prefix.
+                    id = int(node['address'][1:])
+                    LOGGER.debug('Check if Activity %s "%s" id=%s still exists',node['address'],node['name'],id)
+                    index = next((index for (index, d) in enumerate(config['activity']) if int(d['id']) == id), None)
+                    LOGGER.debug(' Got: %s',index)
+                    if index is None:
+                        LOGGER.debug(' Deleting...')
+                else:
+                    # Must be a device d\d+
+                    id = int(node['nodedef'][1:])
+                    LOGGER.debug('Check if Device %s "%s" id=%s still exists',node['address'],node['name'],id)
+                    index = next((index for (index, d) in enumerate(config['device']) if int(d['id']) == id), None)
+                    LOGGER.debug(' Got: %s',index)
+                    if index is None:
+                        LOGGER.debug(' Deleting...')
 
     def init_activities_and_devices(self):
         self.l_info("init_activities_and_devices","start")

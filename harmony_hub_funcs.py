@@ -139,6 +139,7 @@ def load_config_file(logger):
     else:
         logger.error('load_config: Harmony config does not exist {}'.format(config))
         return None
+
 #
 # We need a hubs file because write_profile is run  on install
 #
