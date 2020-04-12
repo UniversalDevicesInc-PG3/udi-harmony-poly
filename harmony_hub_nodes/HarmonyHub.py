@@ -349,14 +349,14 @@ class HarmonyHub(polyinterface.Node):
                     index = next((index for (index, d) in enumerate(config['activity']) if int(d['id']) == id), None)
                     #LOGGER.debug(' Got: %s',index)
                     if index is None:
-                        LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'],id)
+                        LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'])
                         self.controller.poly.delNode(address)
                 elif type == 'd':
                     #LOGGER.debug('Check if Device %s "%s" id=%s still exists',node['address'],node['name'],id)
                     index = next((index for (index, d) in enumerate(config['device']) if int(d['id']) == id), None)
                     #LOGGER.debug(' Got: %s',index)
                     if index is None:
-                        LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'],id)
+                        LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'])
                         self.controller.poly.delNode(address)
 
 
