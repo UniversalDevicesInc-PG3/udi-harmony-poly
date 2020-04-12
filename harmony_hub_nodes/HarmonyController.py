@@ -153,27 +153,37 @@ class HarmonyController(polyinterface.Controller):
             self.discover()
         self.l_info("start","done")
 
+    def allNodesAdded(self):
+        LOGGER.debug('nodesAdding: %d', len(self.nodesAdding))
+        return True if len(self.nodesAdding) > 0 else False
+
     def shortPoll(self):
         #self.l_debug('shortPoll','...')
+        if not self.allNodesAdded:
+            LOGGER.debug('Waiting for all nodes to be added...')
         if self.discover_thread is not None:
             if self.discover_thread.isAlive():
                 self.l_debug('shortPoll','discover thread still running...')
+                return
             else:
                 self.l_debug('shortPoll','discover thread is done...')
                 self.discover_thread = None
         if self.profile_thread is not None:
             if self.profile_thread.isAlive():
                 self.l_debug('shortPoll','profile thread still running...')
+                return
             else:
                 self.l_debug('shortPoll','profile thread is done...')
                 self.profile_thread = None
-
-        for node in self.nodes:
+        cnodes = self.nodes.copy()
+        for node in cnodes:
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].shortPoll()
 
     def longPoll(self):
         #self.l_debug('longpoll','...')
+        if not self.allNodesAdded:
+            LOGGER.debug('Waiting for all nodes to be added...')
         for node in self.nodes:
             if self.nodes[node].address != self.address and self.nodes[node].do_poll:
                 self.nodes[node].longPoll()

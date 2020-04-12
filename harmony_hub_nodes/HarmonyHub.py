@@ -56,6 +56,7 @@ class HarmonyHub(polyinterface.Node):
         self.client_status = None
         self.event  = None
         self.config = None
+        self.checked = False
         self.st     = 0
         # Can't poll until start runs.
         self.do_poll = False
@@ -113,8 +114,10 @@ class HarmonyHub(polyinterface.Node):
         #self.l_debug('longPoll','watch={} client_status={}'.format(self.watch,self.client_status))
         if self.watch:
             self.check_client()
-        # Clean out old nodes
-        self.deleted_check(self.get_config())
+        if self.client_status is True and not self.checked:
+            # Clean out old nodes
+            self.deleted_check(self.get_config())
+            self.checked = True
 
     def query(self):
         """
@@ -314,13 +317,14 @@ class HarmonyHub(polyinterface.Node):
             # Read the config if available.
             cfile = get_file(LOGGER,self.address + '.yaml')
             self.l_debug('get_config','Loading hub config: {}'.format(cfile))
+            config = None
             try:
                 with open(cfile, 'r') as infile:
-                    return yaml.load(infile, Loader=yaml.SafeLoader)
+                    config = yaml.load(infile, Loader=yaml.SafeLoader)
             except:
                 self.l_error('get_config',
                              "Unable to load hub config '{}', will load from hub which may not match current profile, please run discover again.".format(cfile), exc_info=True)
-            self.config = self.client.get_config()
+            self.config = config
         return self.config
 
     def deleted_check(self,config):
@@ -329,7 +333,7 @@ class HarmonyHub(polyinterface.Node):
         #
         # This can change while we are checking if another hub is being added...
         #LOGGER.debug("%s",self.controller.poly.config)
-        # These are all the nodes in the config...
+        # These are all the nodes from the config, not the real nodes we added...
         nodes = self.controller.poly.config['nodes'].copy()
         # Pattern match addresses
         pc = re.compile('(\D)(\d+)$')
@@ -339,25 +343,25 @@ class HarmonyHub(polyinterface.Node):
             if node['primary'] == self.address and node['address'] != self.address:
                 LOGGER.info("Checking Node: %s",address)
                 match = pc.match(address)
-                #LOGGER.debug("Got: %s", match)
+                LOGGER.debug("  Match: %s", match)
                 if match:
                     type = match.group(1)
                     id   = int(match.group(2))
-                #LOGGER.debug("Got: %s %s", type,match)
-                if type == 'a':
-                    #LOGGER.debug('Check if Activity %s "%s" id=%s still exists',node['address'],node['name'],id)
-                    index = next((index for (index, d) in enumerate(config['activity']) if int(d['id']) == id), None)
-                    #LOGGER.debug(' Got: %s',index)
-                    if index is None:
-                        LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'])
-                        self.controller.poly.delNode(address)
-                elif type == 'd':
-                    #LOGGER.debug('Check if Device %s "%s" id=%s still exists',node['address'],node['name'],id)
-                    index = next((index for (index, d) in enumerate(config['device']) if int(d['id']) == id), None)
-                    #LOGGER.debug(' Got: %s',index)
-                    if index is None:
-                        LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'])
-                        self.controller.poly.delNode(address)
+                    #LOGGER.debug("Got: %s %s", type,match)
+                    if type == 'a':
+                        LOGGER.debug('  Check if Activity %s "%s" id=%s still exists',node['address'],node['name'],id)
+                        index = next((index for (index, d) in enumerate(config['activity']) if int(d['id']) == id), None)
+                        LOGGER.debug('   Got: %s',index)
+                        if index is None:
+                            LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'])
+                            self.controller.poly.delNode(address)
+                    elif type == 'd':
+                        LOGGER.debug('  Check if Device %s "%s" id=%s still exists',node['address'],node['name'],id)
+                        index = next((index for (index, d) in enumerate(config['device']) if int(d['id']) == id), None)
+                        LOGGER.debug('   Got: %s',index)
+                        if index is None:
+                            LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'])
+                            self.controller.poly.delNode(address)
 
 
     def init_activities_and_devices(self):
