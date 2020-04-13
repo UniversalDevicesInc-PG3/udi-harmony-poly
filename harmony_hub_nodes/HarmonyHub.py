@@ -339,6 +339,7 @@ class HarmonyHub(polyinterface.Node):
         self.controller.poly.delNode(self.address)
 
     def purge(self):
+        LOGGER.info("Purge check starting...")
         config = self.get_config()
         #
         # Check for removed activities or devices
