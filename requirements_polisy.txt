@@ -1,4 +1,4 @@
-polyinterface
+polyinterface >= 2.0.39
 pyaml
 #pyharmony     == 1.0.21
 sleekxmpp
