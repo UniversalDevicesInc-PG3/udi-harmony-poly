@@ -5,9 +5,9 @@
       <!-- Device Status -->
       <st id="ST" editor="BOOL" />
       <!-- Version Major -->
-      <st id="GV1" editor="FLOAT" />
+      <!-- <st id="GV1" editor="FLOAT" /> -->
       <!-- Version Minor -->
-      <st id="GV2" editor="FLOAT" />
+      <!-- <st id="GV2" editor="FLOAT" /> -->
       <!-- Number of Hubs -->
       <st id="GV3" editor="INTEGER" />
       <!-- Debug Mode -->
@@ -75,6 +75,7 @@
         </cmd>
         <cmd id="DOF" />
         <cmd id="DFOF" />
+        <cmd id="DEL" />
         <cmd id="REBOOT" />
         <cmd id="QUERY" />
       </accepts>

@@ -169,6 +169,7 @@ def save_hubs_file(logger,hubs):
         outfile.close()
     return True
 
+# This is only used by write_profile
 def get_server_data(logger):
     # Read the SERVER info from the json.
     try:

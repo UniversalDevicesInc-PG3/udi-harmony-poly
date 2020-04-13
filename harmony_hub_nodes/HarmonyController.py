@@ -13,8 +13,8 @@
 
 import sys
 sys.path.insert(0,"pyharmony")
-import polyinterface
-import json,re,time,sys,os.path,yaml,logging,json,warnings
+from polyinterface import Controller,LOG_HANDLER
+import json,re,time,sys,os.path,yaml,logging,json,warnings,time
 from traceback import format_exception
 from copy import deepcopy
 from threading import Thread
@@ -22,9 +22,9 @@ from harmony_hub_nodes import HarmonyHub
 from harmony_hub_funcs import *
 from write_profile import write_profile
 
-LOGGER = polyinterface.LOGGER
+LOGGER = LOG_HANDLER.logger
 
-class HarmonyController(polyinterface.Controller):
+class HarmonyController(Controller):
     """
     The Controller Class is the primary node from an ISY perspective. It is a Superclass
     of polyinterface.Node so all methods from polyinterface.Node are available to this
@@ -55,8 +55,7 @@ class HarmonyController(polyinterface.Controller):
         Super runs all the parent class necessities. You do NOT have
         to override the __init__ method, but if you do, you MUST call super.
         """
-        self.serverdata = get_server_data(LOGGER)
-        self.l_info('init','Initializing VERSION=%s' % (self.serverdata['version']))
+        LOGGER.info('HarmonyController: Initializing')
         super(HarmonyController, self).__init__(polyglot)
         self.name = 'HarmonyHub Controller'
         self.address = 'harmonyctrl'
@@ -64,6 +63,7 @@ class HarmonyController(polyinterface.Controller):
         # These start in threads cause they take a while
         self.discover_thread = None
         self.profile_thread = None
+        self.do_poll = False
         self.hb = 0
 
     def start(self):
@@ -75,13 +75,12 @@ class HarmonyController(polyinterface.Controller):
         this is where you should start. No need to Super this method, the parent
         version does nothing.
         """
-        #polyinterface.LOGGER("start: This is {0} error {1}".format("an"))
+        serverdata = self.poly.get_server_data(check_profile=False)
+        LOGGER.info('Started HarmonyHub NodeServer {}'.format(serverdata['version']))
+                #polyinterface.LOGGER("start: This is {0} error {1}".format("an"))
         self.l_info('start','Starting')
         # Some are getting unclosed socket warnings from sleekxmpp when thread exits that I can't get rid if so ignore them.
         warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*<socket.socket.*>")
-        # Set our version drivers
-        self.setDriver('GV1', self.serverdata['version_major'])
-        self.setDriver('GV2', self.serverdata['version_minor'])
         # Show these for now
         self.l_debug("start","GV4={0} GV8={1}".format(self.getDriver('GV4'),self.getDriver('GV8')))
         self.set_debug_level(self.getDriver('GV4'))
@@ -141,10 +140,10 @@ class HarmonyController(polyinterface.Controller):
             if self.hubs is False:
                 self.l_error("start","No hubs loaded, need to discover?")
                 return
+            # Build/Update profile if necessary
+            serverdata = self.poly.check_profile(serverdata,build_profile=self.update_profile)
             # Restore known hubs from the poly config nodes
             self.add_hubs()
-            # TODO: Need check if this is necessary
-            self.check_profile()
         else:
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
@@ -153,47 +152,55 @@ class HarmonyController(polyinterface.Controller):
             self.discover()
         self.l_info("start","done")
 
+    # TODO: Is it ok to reference nodesAdding?
     def allNodesAdded(self):
         LOGGER.debug('nodesAdding: %d', len(self.nodesAdding))
         return True if len(self.nodesAdding) > 0 else False
 
-    def shortPoll(self):
-        #self.l_debug('shortPoll','...')
+    def canPoll(self):
         if not self.allNodesAdded:
             LOGGER.debug('Waiting for all nodes to be added...')
+            return False
         if self.discover_thread is not None:
-            if self.discover_thread.isAlive():
-                self.l_debug('shortPoll','discover thread still running...')
-                return
+            if self.discover_thread.is_alive():
+                LOGGER.debug('discover thread still running...')
+                return False
             else:
-                self.l_debug('shortPoll','discover thread is done...')
+                LOGGER.debug('discover thread is done...')
                 self.discover_thread = None
         if self.profile_thread is not None:
-            if self.profile_thread.isAlive():
-                self.l_debug('shortPoll','profile thread still running...')
-                return
+            if self.profile_thread.is_alive():
+                LOGGER.debug('profile thread still running...')
+                return False
             else:
-                self.l_debug('shortPoll','profile thread is done...')
+                LOGGER.debug('profile thread is done...')
                 self.profile_thread = None
-        cnodes = self.nodes.copy()
-        for node in cnodes:
-            if self.nodes[node].address != self.address and self.nodes[node].do_poll:
+        return True
+
+    def shortPoll(self):
+        #self.l_debug('shortPoll','...')
+        if not self.canPoll():
+            return False
+        for node in self.nodes:
+            if self.nodes[node].do_poll:
                 self.nodes[node].shortPoll()
 
     def longPoll(self):
         #self.l_debug('longpoll','...')
-        if not self.allNodesAdded:
-            LOGGER.debug('Waiting for all nodes to be added...')
+        if not self.canPoll():
+            return False
         for node in self.nodes:
-            if self.nodes[node].address != self.address and self.nodes[node].do_poll:
+            if self.nodes[node].do_poll:
                 self.nodes[node].longPoll()
         self.heartbeat()
 
     def query(self):
         self.l_debug('query','...')
+        if not self.canPoll():
+            return False
         self.reportDrivers()
         for node in self.nodes:
-            if self.nodes[node].address != self.address and self.nodes[node].do_poll:
+            if self.nodes[node].do_poll:
                 self.nodes[node].query()
 
     def discover(self):
@@ -313,6 +320,16 @@ class HarmonyController(polyinterface.Controller):
                 self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'])
             self.save_hubs()
 
+        while not self.allNodesAdded:
+            LOGGER.debug('Waiting for all nodes to be added...')
+            time.sleep(2)
+
+        # Run each hub's purge to clean up removed devices
+        LOGGER.debug('All nodes have been added')
+        for node in self.nodes:
+            if self.nodes[node].do_poll:
+                self.nodes[node].purge()
+
 
     def add_hub(self,address,name,host,port,update=True):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} update={4}".format(address,name,host,port,update))
@@ -428,15 +445,6 @@ class HarmonyController(polyinterface.Controller):
     def l_debug(self, name, string):
         LOGGER.debug("%s:%s: %s" % (self.id,name,string))
 
-    def check_profile(self):
-        cdata = deepcopy(self.polyConfig['customData'])
-        if not 'profile_version' in cdata:
-            cdata['profile_version'] = None
-        self.l_info('check_profile','profile_version: source={0} current={1}'.format(self.serverdata['profile_version'],cdata['profile_version']))
-        if self.serverdata['profile_version'] != cdata['profile_version']:
-            self.l_info('check_profile','updating profile...')
-            self.update_profile()
-
     # Just calls build_profile with poll_hubs=False
     def update_profile(self):
         self.build_profile(False)
@@ -464,16 +472,15 @@ class HarmonyController(polyinterface.Controller):
         except (Exception) as err:
             self.l_error('build_profile','write_profile failed: {}'.format(err), exc_info=True)
             self.setDriver('GV7', 7)
-        cdata = deepcopy(self.polyConfig['customData'])
-        if wrote_profile:
-            cdata['profile_version'] = self.serverdata['profile_version']
-            self.saveCustomData(cdata)
         # Reload the config we just generated.
         self.load_config()
         #
         # Upload the profile
         #
         st = self.install_profile()
+        #
+        # Restart the hubs since the config data files may have changed.
+        #
         if not self.first_run:
             self.restart_hubs()
         return st
@@ -627,8 +634,9 @@ class HarmonyController(polyinterface.Controller):
     """
     drivers = [
         {'driver': 'ST',  'value': 1,  'uom': 2},  #    bool:   Connection status (managed by polyglot)
-        {'driver': 'GV1', 'value': 0,  'uom': 56}, #   float:   Version of this code (Major)
-        {'driver': 'GV2', 'value': 0,  'uom': 56}, #   float:   Version of this code (Minor)
+        # No longer used.
+        #{'driver': 'GV1', 'value': 0,  'uom': 56}, #   float:   Version of this code (Major)
+        #{'driver': 'GV2', 'value': 0,  'uom': 56}, #   float:   Version of this code (Minor)
         {'driver': 'GV3', 'value': 0,  'uom': 25}, # integer: Number of the number of hubs we manage
         {'driver': 'GV4', 'value': 0,  'uom': 25}, # integer: Log/Debug Mode
         {'driver': 'GV5', 'value': 5,  'uom': 25}, # integer: shortpoll

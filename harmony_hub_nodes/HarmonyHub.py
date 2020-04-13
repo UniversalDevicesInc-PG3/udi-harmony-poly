@@ -60,6 +60,7 @@ class HarmonyHub(polyinterface.Node):
         self.st     = 0
         # Can't poll until start runs.
         self.do_poll = False
+        self.lpfx = "%s:%s:" % (name,address)
         self.l_info("init","hub '%s' '%s' %s" % (address, name, host))
         # But here we pass the lowercase, cause ISY doesn't allow the upper case!
         # A Hub is it's own primary
@@ -114,10 +115,6 @@ class HarmonyHub(polyinterface.Node):
         #self.l_debug('longPoll','watch={} client_status={}'.format(self.watch,self.client_status))
         if self.watch:
             self.check_client()
-        if self.client_status is True and not self.checked:
-            # Clean out old nodes
-            self.deleted_check(self.get_config())
-            self.checked = True
 
     def query(self):
         """
@@ -226,7 +223,7 @@ class HarmonyHub(polyinterface.Node):
             else:
                 # Then client_status will be True when client is ready
                 if self.client_status is True:
-                    if self.thread.isAlive():
+                    if self.thread.is_alive():
                         if self.client.state.current_state() == 'connected':
                             # All seems good.
                             # If activity method changed from or to a 2 then we need to reconnect to register or unregister the callback
@@ -244,7 +241,7 @@ class HarmonyHub(polyinterface.Node):
                         self.l_error("check_client","Thread is dead, need to restart")
                         self._set_st(0)
                 else:
-                    if self.thread.isAlive():
+                    if self.thread.is_alive():
                         self.l_info("check_client","Waiting for client startup to complete, status = {0}..".format(self.client_status))
                         return False
                     else:
@@ -327,7 +324,22 @@ class HarmonyHub(polyinterface.Node):
             self.config = config
         return self.config
 
-    def deleted_check(self,config):
+    def delete(self):
+        """
+        Delete all my children and then myself
+        """
+        LOGGER.warning("%s: Deleting myself and all my children",self.lpfx)
+        # We use the list of nodes in the config, not just our added nodes...
+        for node in self.controller.poly.config['nodes'].copy():
+            address = node['address']
+            if node['primary'] == self.address and node['address'] != self.address:
+                LOGGER.warning('%s Deleting my child %s "%s"',self.lpfx,address,node['name'])
+                self.controller.poly.delNode(address)
+        LOGGER.warning('%s Deleting myself',self.lpfx)
+        self.controller.poly.delNode(self.address)
+
+    def purge(self):
+        config = self.get_config()
         #
         # Check for removed activities or devices
         #
@@ -336,7 +348,7 @@ class HarmonyHub(polyinterface.Node):
         # These are all the nodes from the config, not the real nodes we added...
         nodes = self.controller.poly.config['nodes'].copy()
         # Pattern match addresses
-        pc = re.compile('(\D)(\d+)$')
+        pc = re.compile('(.)(\d+)$')
         # Check if we still have them.
         for node in nodes:
             address = node['address']
@@ -362,6 +374,8 @@ class HarmonyHub(polyinterface.Node):
                         if index is None:
                             LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'])
                             self.controller.poly.delNode(address)
+                    else:
+                        LOGGER.warning('Unknown type "%s" "%s" id=%s still exists',type,node['address'],node['name'])
 
 
     def init_activities_and_devices(self):
@@ -376,14 +390,20 @@ class HarmonyHub(polyinterface.Node):
         #
         for a in harmony_config['activity']:
             if a['id'] != '-1':
-                self.l_info("init","Activity: %s  Id: %s" % (a['label'], a['id']))
-                self.add_activity(a['id'],a['label'])
+                try:
+                    self.l_info("init","Activity: %s  Id: %s" % (a['label'], a['id']))
+                    self.add_activity(a['id'],a['label'])
+                except:
+                    LOGGER.error("%s Error adding activity",self.lpfx,exc_info=True)
         #
         # Add all devices
         #
         for d in harmony_config['device']:
-            self.l_info("init","Device id='%s' name='%s', Type=%s, Manufacturer=%s, Model=%s" % (d['id'],d['label'],d['type'],d['manufacturer'],d['model']))
-            self.add_device(d['id'],d['label'])
+            try:
+                self.l_info("init","Device id='%s' name='%s', Type=%s, Manufacturer=%s, Model=%s" % (d['id'],d['label'],d['type'],d['manufacturer'],d['model']))
+                self.add_device(d['id'],d['label'])
+            except:
+                LOGGER.error("%s Error adding device",self.lpfx,exc_info=True)
         self.l_info("init_activities_and_devices","end")
 
     def add_device(self,number,name):
@@ -513,6 +533,13 @@ class HarmonyHub(polyinterface.Node):
         self.l_debug("_cmd_off","activity=%d" % (self.current_activity))
         return self.end_activity()
 
+    def _cmd_delete(self, command):
+        """
+        Delete's this Hub and all it's children from Polyglot
+        """
+        self.l_debug("_cmd_delete","")
+        return self.delete()
+
     def l_info(self, name, string):
         LOGGER.info("Hub:%s:%s:%s: %s" %  (self.id,self.name,name,string))
 
@@ -540,4 +567,5 @@ class HarmonyHub(polyinterface.Node):
         'CHANGE_CHANNEL': _cmd_change_channel,
         'DOF': _cmd_off,
         'DFOF': _cmd_off,
+        'DEL': _cmd_delete,
     }

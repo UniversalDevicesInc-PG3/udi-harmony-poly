@@ -112,6 +112,17 @@ The commands for this node
 
 Each harmony hub found are configured will have a node.
 
+### Node Commands
+
+The command for this Nodes
+
+#### Query
+  * Polls the hub and sets status in the ISY
+#### Power Off / Fast Off
+  * Runs hub power off activity
+#### Delete Hub
+   * Deletes the hub along with it's Activities and Devices from Polyglot and the ISY
+
 ## Harmony Activity
 
 Each harmony hub activity will have a node.
@@ -145,6 +156,10 @@ Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
 # Release Notes
+- 2.4.0 04/13/2020
+  - [Delete devices that no longer exist](https://github.com/jimboca/udi-harmony-poly/issues/22)
+    - After discover completes it will check for activities and devices that are no longer in the hub configuration
+    - A hub that is not found will not be deleted, you can select the Hub in the Admin Console and select "Delete Hub"
 - 2.3.0 04/10/2020
   - [Activity and/or Devices orders are not remembered when new ones are added](https://github.com/jimboca/udi-harmony-poly/issues/23)
 - 2.2.12: 04/09/2020

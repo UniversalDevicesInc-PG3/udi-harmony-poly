@@ -13,6 +13,32 @@ VERSION_FILE = "profile/version.txt"
 #    # use what the user has defined.
 #    this_host = config['host']
 
+NODEDEF_TMPL_HUB = """
+  <nodeDef id="%s" nodeType="139" nls="%s">
+    <sts>
+      <st id="ST" editor="BOOL" />
+      <st id="GV3" editor="%s" />
+    </sts>
+    <cmds>
+      <sends>
+    <cmd id="DON" />
+    <cmd id="DOF" />
+      </sends>
+      <accepts>
+        <cmd id="SET_ACTIVITY">
+          <p id="" editor="%s" init="%s"/>
+        </cmd>
+        <cmd id="CHANGE_CHANNEL">
+          <p id="" editor="CHANNEL"/>
+        </cmd>
+        <cmd id="QUERY" />
+        <cmd id="DOF" />
+        <cmd id="DFOF" />
+        <cmd id="DEL" />
+      </accepts>
+    </cmds>
+  </nodeDef>
+"""
 NODEDEF_TMPL_ACTIVITY = """
   <nodeDef id="%s" nodeType="139" nls="%s">
     <sts>
@@ -151,7 +177,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
         name = ahub['name']
         info = "Hub: %s '%s'" % (address,name)
         nodedef.write("\n  <!-- === %s -->\n" % (info))
-        nodedef.write(NODEDEF_TMPL_ACTIVITY % (address, 'HARMONYHUB', 'Act' + address, 'Act' + address, 'GV3'))
+        nodedef.write(NODEDEF_TMPL_HUB % (address, 'HARMONYHUB', 'Act' + address, 'Act' + address, 'GV3'))
         nls.write("\n# %s" % (info))
         nls.write(NLS_NODE_TMPL % (address, name, address))
         #
