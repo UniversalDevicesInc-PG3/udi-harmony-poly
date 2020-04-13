@@ -29,7 +29,7 @@ class HarmonyHub(polyinterface.Node):
     reportDrivers(): Forces a full update of all drivers to Polyglot/ISY.
     query(): Called when ISY sends a query request to Polyglot for this specific node
     """
-    def __init__(self, parent, address, name, host, port, watch=True):
+    def __init__(self, parent, address, name, host, port, watch=True, discover=False):
         """
         Optional.
         Super runs all the parent class necessities. You do NOT have
@@ -40,6 +40,7 @@ class HarmonyHub(polyinterface.Node):
         :param name: This nodes name
         :param watch: Allow turning off hub monitoring when you know the hubs are not responding.
         :             Set to false until it's all running so short/long poll and query won't also try to start it.
+        :param discover: Only set to True when device is added by new discover
         """
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
         # The id using the original case of the string
@@ -48,6 +49,7 @@ class HarmonyHub(polyinterface.Node):
         self.host   = host
         self.port   = port
         self.parent = parent
+        self.discover = discover
         self.watch  = False # Not watching yet
         self.watch_init  = watch
         self.client = None
@@ -56,7 +58,7 @@ class HarmonyHub(polyinterface.Node):
         self.client_status = None
         self.event  = None
         self.config = None
-        self.checked = False
+        self.purge_run = False
         self.st     = 0
         # Can't poll until start runs.
         self.do_poll = False
@@ -83,6 +85,10 @@ class HarmonyHub(polyinterface.Node):
         # Connect to the hub if desired
         #
         self.set_watch(self.watch_init)
+        #
+        # Purge when we are called by discover only, not everytime we are added
+        #
+        self.purge()
         #
         # Call query to initialize and pull the info from the hub.
         #
@@ -339,7 +345,7 @@ class HarmonyHub(polyinterface.Node):
         self.controller.poly.delNode(self.address)
 
     def purge(self):
-        LOGGER.info("Purge check starting...")
+        LOGGER.info("%s Purge check starting...",self.lpfx)
         config = self.get_config()
         #
         # Check for removed activities or devices
@@ -377,6 +383,7 @@ class HarmonyHub(polyinterface.Node):
                             self.controller.poly.delNode(address)
                     else:
                         LOGGER.warning('Unknown type "%s" "%s" id=%s still exists',type,node['address'],node['name'])
+        self.purge_run = True
 
 
     def init_activities_and_devices(self):
@@ -405,6 +412,7 @@ class HarmonyHub(polyinterface.Node):
                 self.add_device(d['id'],d['label'])
             except:
                 LOGGER.error("%s Error adding device",self.lpfx,exc_info=True)
+
         self.l_info("init_activities_and_devices","end")
 
     def add_device(self,number,name):

@@ -318,20 +318,10 @@ class HarmonyController(Controller):
                 self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'])
             self.save_hubs()
 
-        while not self.allNodesAdded:
-            LOGGER.debug('Waiting for all nodes to be added...')
-            time.sleep(2)
-
-        # Run each hub's purge to clean up removed devices
-        LOGGER.debug('All nodes have been added')
-        for node in self.nodes:
-            if self.nodes[node].do_poll:
-                self.nodes[node].purge()
-
 
     def add_hub(self,address,name,host,port,update=True):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} update={4}".format(address,name,host,port,update))
-        self.addNode(HarmonyHub(self, address, name, host, port, watch=self.watch_mode))
+        self.addNode(HarmonyHub(self, address, name, host, port, watch=self.watch_mode, discover=True))
         self._set_num_hubs(self.num_hubs + 1)
         if update:
             self.update_hub_list({'address': address, 'name': name, 'host': host, 'port': port})
