@@ -313,6 +313,7 @@ class HarmonyController(polyinterface.Controller):
                 self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'])
             self.save_hubs()
 
+
     def add_hub(self,address,name,host,port,update=True):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} update={4}".format(address,name,host,port,update))
         self.addNode(HarmonyHub(self, address, name, host, port, watch=self.watch_mode))
@@ -520,7 +521,7 @@ class HarmonyController(polyinterface.Controller):
 
     def set_all_logs(self,level):
         LOGGER.setLevel(level)
-        logging.getLogger('sleekxmpp').setLevel(level)
+        logging.getLogger('sleekxmpp').setLevel(logging.ERROR)
         logging.getLogger('requests').setLevel(level)
         logging.getLogger('urllib3').setLevel(level)
         logging.getLogger('pyharmony').setLevel(level)
@@ -529,6 +530,8 @@ class HarmonyController(polyinterface.Controller):
         # First run will be None, so default is all
         if level is None:
             level = 0
+        else:
+            level = int(level)
         self.setDriver('GV4', level)
         # 0=All 10=Debug are the same because 0 (NOTSET) doesn't show everything.
         if level == 0 or level == 10:
