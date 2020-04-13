@@ -13,7 +13,7 @@
 
 import sys
 sys.path.insert(0,"pyharmony")
-from polyinterface import Controller,LOG_HANDLER
+from polyinterface import Controller,LOG_HANDLER,LOGGER
 import json,re,time,sys,os.path,yaml,logging,json,warnings,time
 from traceback import format_exception
 from copy import deepcopy
@@ -21,8 +21,6 @@ from threading import Thread
 from harmony_hub_nodes import HarmonyHub
 from harmony_hub_funcs import *
 from write_profile import write_profile
-
-LOGGER = LOG_HANDLER.logger
 
 class HarmonyController(Controller):
     """
