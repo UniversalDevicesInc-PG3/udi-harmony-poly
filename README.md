@@ -160,6 +160,7 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
   - [Delete devices that no longer exist](https://github.com/jimboca/udi-harmony-poly/issues/22)
     - After discover completes it will check for activities and devices that are no longer in the hub configuration
     - A hub that is not found will not be deleted, you can select the Hub in the Admin Console and select "Delete Hub"
+  - Now requires polyinterface 2.0.40 which should be updated on install
 - 2.3.0 04/10/2020
   - [Activity and/or Devices orders are not remembered when new ones are added](https://github.com/jimboca/udi-harmony-poly/issues/23)
 - 2.2.12: 04/09/2020
