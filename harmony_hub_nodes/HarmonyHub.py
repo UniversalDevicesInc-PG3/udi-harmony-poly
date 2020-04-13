@@ -82,13 +82,14 @@ class HarmonyHub(polyinterface.Node):
         self.setDriver('GV1', ip2long(self.host))
         self.setDriver('GV2', self.port)
         #
+        # Purge when we are called by discover only, not everytime we are added
+        #
+        if self.discover:
+            self.purge()
+        #
         # Connect to the hub if desired
         #
         self.set_watch(self.watch_init)
-        #
-        # Purge when we are called by discover only, not everytime we are added
-        #
-        self.purge()
         #
         # Call query to initialize and pull the info from the hub.
         #
