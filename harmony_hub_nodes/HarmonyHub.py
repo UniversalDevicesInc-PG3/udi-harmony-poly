@@ -85,7 +85,10 @@ class HarmonyHub(polyinterface.Node):
         # Purge when we are called by discover only, not everytime we are added
         #
         if self.discover:
-            self.purge()
+            try:
+                self.purge()
+            except:
+                LOGGER.error("%s purge failed",self.lpfx,exc_info=True)
         #
         # Connect to the hub if desired
         #
@@ -346,8 +349,9 @@ class HarmonyHub(polyinterface.Node):
         self.controller.poly.delNode(self.address)
 
     def purge(self):
-        LOGGER.info("%s Purge check starting...",self.lpfx)
+        LOGGER.info("%s starting...",self.lpfx)
         config = self.get_config()
+        #LOGGER.debug("%s config=",self.lpfx,config)
         #
         # Check for removed activities or devices
         #
@@ -361,7 +365,7 @@ class HarmonyHub(polyinterface.Node):
         for node in nodes:
             address = node['address']
             if node['primary'] == self.address and node['address'] != self.address:
-                LOGGER.info("Checking Node: %s",address)
+                LOGGER.info("%s Checking Node: %s",self.lpfx,address)
                 match = pc.match(address)
                 LOGGER.debug("  Match: %s", match)
                 if match:
@@ -369,21 +373,22 @@ class HarmonyHub(polyinterface.Node):
                     id   = int(match.group(2))
                     #LOGGER.debug("Got: %s %s", type,match)
                     if type == 'a':
-                        LOGGER.debug('  Check if Activity %s "%s" id=%s still exists',node['address'],node['name'],id)
+                        LOGGER.debug('%s   Check if Activity %s "%s" id=%s still exists',self.lpfx,node['address'],node['name'],id)
                         index = next((index for (index, d) in enumerate(config['activity']) if int(d['id']) == id), None)
-                        LOGGER.debug('   Got: %s',index)
+                        LOGGER.debug('%s    Got: %s',self.lpfx,index)
                         if index is None:
-                            LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'])
+                            LOGGER.warning('%s Deleting my Activity that longer exists %s "%s"',self.lpfx,address,node['name'])
                             self.controller.poly.delNode(address)
                     elif type == 'd':
-                        LOGGER.debug('  Check if Device %s "%s" id=%s still exists',node['address'],node['name'],id)
+                        LOGGER.debug('%s   Check if Device %s "%s" id=%s still exists',self.lpfx,node['address'],node['name'],id)
                         index = next((index for (index, d) in enumerate(config['device']) if int(d['id']) == id), None)
-                        LOGGER.debug('   Got: %s',index)
+                        LOGGER.debug('%s    Got: %s',self.lpfx,index)
                         if index is None:
-                            LOGGER.warning('Deleting my Device that longer exists %s "%s"',address,node['name'])
+                            LOGGER.warning('%s Deleting my Device that longer exists %s "%s"',self.lpfx,address,node['name'])
                             self.controller.poly.delNode(address)
                     else:
-                        LOGGER.warning('Unknown type "%s" "%s" id=%s still exists',type,node['address'],node['name'])
+                        LOGGER.warning('%s Unknown type "%s" "%s" id=%s still exists',self.lpfx,type,node['address'],node['name'])
+        LOGGER.info("%s done",self.lpfx)
         self.purge_run = True
 
 

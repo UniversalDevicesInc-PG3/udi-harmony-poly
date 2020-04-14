@@ -315,13 +315,13 @@ class HarmonyController(Controller):
             hl = self.hubs
             self.clear_hubs()
             for cnode in hl:
-                self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'])
+                self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'],discover=True)
             self.save_hubs()
 
 
-    def add_hub(self,address,name,host,port,update=True):
+    def add_hub(self,address,name,host,port,update=True,discover=False):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} update={4}".format(address,name,host,port,update))
-        self.addNode(HarmonyHub(self, address, name, host, port, watch=self.watch_mode, discover=True))
+        self.addNode(HarmonyHub(self, address, name, host, port, watch=self.watch_mode, discover=discover))
         self._set_num_hubs(self.num_hubs + 1)
         if update:
             self.update_hub_list({'address': address, 'name': name, 'host': host, 'port': port})
