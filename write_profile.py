@@ -34,7 +34,6 @@ NODEDEF_TMPL_HUB = """
         <cmd id="QUERY" />
         <cmd id="DOF" />
         <cmd id="DFOF" />
-        <cmd id="PURGE" />
         <cmd id="DEL" />
       </accepts>
     </cmds>
