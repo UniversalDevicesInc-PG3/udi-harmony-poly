@@ -555,6 +555,13 @@ class HarmonyHub(polyinterface.Node):
         self.l_debug("_cmd_delete","")
         return self.delete()
 
+    def _cmd_purge(self, command):
+        """
+        Delete's this Hub and all it's children from Polyglot
+        """
+        self.l_debug("_cmd_purge","")
+        return self.purge()
+
     def l_info(self, name, string):
         LOGGER.info("Hub:%s:%s:%s: %s" %  (self.id,self.name,name,string))
 
@@ -583,4 +590,5 @@ class HarmonyHub(polyinterface.Node):
         'DOF': _cmd_off,
         'DFOF': _cmd_off,
         'DEL': _cmd_delete,
+        'PURGE': _cmd_purge,
     }

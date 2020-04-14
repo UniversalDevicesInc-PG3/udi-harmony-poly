@@ -121,7 +121,9 @@ The command for this Nodes
 #### Power Off / Fast Off
   * Runs hub power off activity
 #### Delete Hub
-   * Deletes the hub along with it's Activities and Devices from Polyglot and the ISY
+  * Deletes the hub along with it's Activities and Devices from Polyglot and the ISY
+#### Purge
+  * Deletes old Activities and Devices from Polyglot and the ISY that are no longer in the Harmony configuration
 
 ## Harmony Activity
 
