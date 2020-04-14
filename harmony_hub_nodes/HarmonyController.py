@@ -139,7 +139,7 @@ class HarmonyController(Controller):
                 self.l_error("start","No hubs loaded, need to discover?")
                 return
             # Build/Update profile if necessary
-            serverdata = self.poly.check_profile(serverdata,build_profile=self.update_profile)
+            serverdata = self.poly.check_profile(serverdata,build_profile=self._update_profile)
             # Restore known hubs from the poly config nodes
             self.add_hubs()
         else:
