@@ -287,6 +287,7 @@ class HarmonyController(Controller):
         #
         if discover_result is not None:
             for config in discover_result:
+                LOGGER.debug("hub config: %s",config)
                 addit = True
                 if 'current_fw_version' in config:
                     if config['current_fw_version'] == '4.15.206':
