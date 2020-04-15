@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import yaml,collections,re,os,zipfile
-from harmony_hub_funcs import harmony_hub_client,get_server_data,load_hubs_file,get_file,CONFIG_FILE,load_config_file,write_config_file,get_file
+from harmony_hub_funcs import harmony_hub_client,load_hubs_file,get_file,CONFIG_FILE,load_config_file,write_config_file,get_file,get_server_data
 
 pfx = "write_profile:"
 
@@ -13,6 +13,32 @@ VERSION_FILE = "profile/version.txt"
 #    # use what the user has defined.
 #    this_host = config['host']
 
+NODEDEF_TMPL_HUB = """
+  <nodeDef id="%s" nodeType="139" nls="%s">
+    <sts>
+      <st id="ST" editor="BOOL" />
+      <st id="GV3" editor="%s" />
+    </sts>
+    <cmds>
+      <sends>
+    <cmd id="DON" />
+    <cmd id="DOF" />
+      </sends>
+      <accepts>
+        <cmd id="SET_ACTIVITY">
+          <p id="" editor="%s" init="%s"/>
+        </cmd>
+        <cmd id="CHANGE_CHANNEL">
+          <p id="" editor="CHANNEL"/>
+        </cmd>
+        <cmd id="QUERY" />
+        <cmd id="DOF" />
+        <cmd id="DFOF" />
+        <cmd id="DEL" />
+      </accepts>
+    </cmds>
+  </nodeDef>
+"""
 NODEDEF_TMPL_ACTIVITY = """
   <nodeDef id="%s" nodeType="139" nls="%s">
     <sts>
@@ -112,13 +138,24 @@ def write_profile(logger,hub_list,poll_hubs=True):
         config_data['info'] = dict()
         config_data['info']['activities'] = list()
         config_data['info']['functions'] = list()
+    # This was added in 2.4.0
+    # And we don't save from previous runs because we don't care
+    # about index order
+    config_data['info']['devices'] = list()
     # References to internal data structures
     activities = config_data['info']['activities']
+    devices    = config_data['info']['devices']
     functions  = config_data['info']['functions']
     # Activity 0 is always power off
     if len(activities) == 0:
         logger.info("Initializing Activities List...")
         activities.append({'label':'Power Off','id':-1});
+    # Set all counts back to zero
+    for name in ['functions', 'devices', 'activities']:
+        for item in config_data['info'][name]:
+            item['cnt'] = 0
+            if name == 'devices' or name == 'activities':
+                item['hub'] = list()
     #
     # Start the nls with the template data.
     #
@@ -151,7 +188,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
         name = ahub['name']
         info = "Hub: %s '%s'" % (address,name)
         nodedef.write("\n  <!-- === %s -->\n" % (info))
-        nodedef.write(NODEDEF_TMPL_ACTIVITY % (address, 'HARMONYHUB', 'Act' + address, 'Act' + address, 'GV3'))
+        nodedef.write(NODEDEF_TMPL_HUB % (address, 'HARMONYHUB', 'Act' + address, 'Act' + address, 'GV3'))
         nls.write("\n# %s" % (info))
         nls.write(NLS_NODE_TMPL % (address, name, address))
         #
@@ -204,9 +241,11 @@ def write_profile(logger,hub_list,poll_hubs=True):
                 if index is None:
                     index = len(activities)
                     logger.debug('  Adding as new activity %d', index)
-                    activities.append({'label':aname,'id':int(a['id'])});
+                    activities.append({'label':aname,'id':int(a['id']),'cnt':1,'hub':[address]});
                 else:
                     logger.debug('  Using existing activity %s index=%d',activities[index],index)
+                    activities[index]['cnt'] += 1
+                    activities[index]['hub'].append(address)
                 nls.write(NLS_TMPL % (address.upper(), index, aname))
                 # This is the list of button numbers in this device.
                 subset.append(index)
@@ -223,6 +262,8 @@ def write_profile(logger,hub_list,poll_hubs=True):
             nls.write("\n# %s" % info)
             nls.write(NLS_NODE_TMPL % ('d' + d['id'], d['label'], 'd' + d['id']))
             logger.debug("%s   Device: %s  Id: %s" % (pfx, d['label'], d['id']))
+            logger.debug("%s",devices)
+            devices.append({'label':d['label'],'id':int(d['id']),'cnt': 1,'hub':[address]});
             #
             # Build all the button functions, these are global to all devices
             #
@@ -239,10 +280,12 @@ def write_profile(logger,hub_list,poll_hubs=True):
                         if index is None:
                             index = len(functions)
                             logger.debug('  Adding as new function %d', index)
-                            functions.append({'label':str(f['label']),'name':fname,'command':{str(d['id']):str(ay['command'])}});
-                            config_data['info']['functions'][index]['command'][str(d['id'])] = ay['command']
+                            functions.append({'label':str(f['label']),'name':fname,'command':{str(d['id']):str(ay['command'])},cnt: 1});
                         else:
                             logger.debug('  Using existing function %s index=%d',functions[index],index)
+                            functions[index]['cnt'] += 1
+                        # dict that makes it easy to find the actual command for this
+                        functions[index]['command'][str(d['id'])] = ay['command']
                         logger.debug("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, index, f['name'], f['label'], ay['command']))
                         #nls.write("# Button name: %s, label: %s\n" % (f['name'], f['label']))
                         # This is the list of button numbers in this device.
@@ -271,6 +314,8 @@ def write_profile(logger,hub_list,poll_hubs=True):
 
     write_config_file(logger,config_data)
 
+    # We still write this, but don't use it anymore since restarting
+    # the nodeserver will do it now when necessary
     with open(VERSION_FILE, 'w') as outfile:
         outfile.write(sd['profile_version'])
     outfile.close()
@@ -278,24 +323,6 @@ def write_profile(logger,hub_list,poll_hubs=True):
     logger.info(pfx + " done.")
 
     return(config_data)
-
-
-def write_profile_zip(logger):
-    src = 'profile'
-    abs_src = os.path.abspath(src)
-    with zipfile.ZipFile('profile.zip', 'w') as zf:
-        for dirname, subdirs, files in os.walk(src):
-            # Ignore dirs starint with a dot, stupid .AppleDouble...
-            if not "/." in dirname:
-                for filename in files:
-                    if filename.endswith('.xml') or filename.endswith('txt'):
-                        absname = os.path.abspath(os.path.join(dirname, filename))
-                        arcname = absname[len(abs_src) + 1:]
-                        logger.info('write_profile_zip: %s as %s' % (os.path.join(dirname, filename),
-                                                                     arcname))
-                        zf.write(absname, arcname)
-    zf.close()
-
 
 if __name__ == "__main__":
     import logging,json
@@ -306,24 +333,8 @@ if __name__ == "__main__":
     )
     logger.setLevel(logging.DEBUG)
     # Only write the profile if the version is updated.
-    sd = get_server_data(logger)
-    if sd is not False:
-        local_version = None
-        try:
-            with open(VERSION_FILE,'r') as vfile:
-                local_version = vfile.readline()
-                local_version = local_version.rstrip()
-                vfile.close()
-        except (FileNotFoundError):
-            pass
-        except (Exception) as err:
-            logger.error('{0} failed to read local version from {1}: {2}'.format(pfx,VERSION_FILE,err), exc_info=True)
-        if local_version == sd['profile_version']:
-            logger.info('{0} Not Generating new profile since local version {1} is the same current {2}'.format(pfx,local_version,sd['profile_version']))
-        else:
-            logger.info('{0} Generating new profile since local version {1} is not current {2}'.format(pfx,local_version,sd['profile_version']))
-            hubs = load_hubs_file(logger)
-            if hubs is False:
-                logger.error('{0} Unable to load hubs file which does not exist on first run or before 2.1.0, please run Build Profile in admin console after restarting this nodeserver'.format(pfx))
-            else:
-                write_profile(logger,hubs)
+    hubs = load_hubs_file(logger)
+    if hubs is False:
+        logger.error('{0} Unable to load hubs file which does not exist on first run or before 2.1.0, please run Build Profile in admin console after restarting this nodeserver'.format(pfx))
+    else:
+        write_profile(logger,hubs)

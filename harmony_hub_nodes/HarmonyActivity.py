@@ -39,6 +39,7 @@ class HarmonyActivity(polyinterface.Node):
         address = "a" + address
         # But here we pass the lowercase, cause ISY doesn't allow the upper case!
         super(HarmonyActivity, self).__init__(parent.controller, parent.address, address.lower(), name)
+        self.l_info("init","Activity")
         #self.name   = name
         #self.address = address
         # Only Hub devices are polled.

@@ -139,6 +139,7 @@ def load_config_file(logger):
     else:
         logger.error('load_config: Harmony config does not exist {}'.format(config))
         return None
+
 #
 # We need a hubs file because write_profile is run  on install
 #
@@ -168,6 +169,7 @@ def save_hubs_file(logger,hubs):
         outfile.close()
     return True
 
+# This is only used by write_profile
 def get_server_data(logger):
     # Read the SERVER info from the json.
     try:

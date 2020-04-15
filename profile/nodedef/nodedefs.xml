@@ -5,9 +5,9 @@
       <!-- Device Status -->
       <st id="ST" editor="BOOL" />
       <!-- Version Major -->
-      <st id="GV1" editor="FLOAT" />
+      <!-- <st id="GV1" editor="FLOAT" /> -->
       <!-- Version Minor -->
-      <st id="GV2" editor="FLOAT" />
+      <!-- <st id="GV2" editor="FLOAT" /> -->
       <!-- Number of Hubs -->
       <st id="GV3" editor="INTEGER" />
       <!-- Debug Mode -->
@@ -51,6 +51,8 @@
         </cmd>
         <cmd id="QUERY" />
         <cmd id="DISCOVER" />
+        <cmd id="PURGE_CHECK" />
+        <cmd id="PURGE_EXECUTE" />
         <cmd id="INSTALL_PROFILE" />
         <cmd id="UPDATE_PROFILE" />
         <cmd id="BUILD_PROFILE" />
@@ -75,6 +77,7 @@
         </cmd>
         <cmd id="DOF" />
         <cmd id="DFOF" />
+        <cmd id="DEL" />
         <cmd id="REBOOT" />
         <cmd id="QUERY" />
       </accepts>

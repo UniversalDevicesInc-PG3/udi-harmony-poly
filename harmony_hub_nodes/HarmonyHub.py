@@ -1,11 +1,12 @@
 
-import polyinterface,sys,logging,yaml
+import polyinterface,sys,logging,yaml,re
 from traceback import format_exception
 from threading import Thread,Event
 from harmony_hub_nodes import HarmonyDevice,HarmonyActivity
 from harmony_hub_funcs import ip2long,long2ip,get_valid_node_name,get_file
 from pyharmony import client as harmony_client
 from sleekxmpp.exceptions import IqError, IqTimeout
+from copy import deepcopy
 
 LOGGER = polyinterface.LOGGER
 
@@ -28,7 +29,7 @@ class HarmonyHub(polyinterface.Node):
     reportDrivers(): Forces a full update of all drivers to Polyglot/ISY.
     query(): Called when ISY sends a query request to Polyglot for this specific node
     """
-    def __init__(self, parent, address, name, host, port, watch=True):
+    def __init__(self, parent, address, name, host, port, watch=True, discover=False):
         """
         Optional.
         Super runs all the parent class necessities. You do NOT have
@@ -39,6 +40,7 @@ class HarmonyHub(polyinterface.Node):
         :param name: This nodes name
         :param watch: Allow turning off hub monitoring when you know the hubs are not responding.
         :             Set to false until it's all running so short/long poll and query won't also try to start it.
+        :param discover: Only set to True when device is added by new discover
         """
         # The id (node_def_id) is the address because each hub has a unique nodedef in the profile.
         # The id using the original case of the string
@@ -47,6 +49,7 @@ class HarmonyHub(polyinterface.Node):
         self.host   = host
         self.port   = port
         self.parent = parent
+        self.discover = discover
         self.watch  = False # Not watching yet
         self.watch_init  = watch
         self.client = None
@@ -54,9 +57,11 @@ class HarmonyHub(polyinterface.Node):
         self.thread = None
         self.client_status = None
         self.event  = None
+        self.harmony_config = self.parent.harmony_config['info']
         self.st     = 0
         # Can't poll until start runs.
         self.do_poll = False
+        self.lpfx = "%s:%s:" % (name,address)
         self.l_info("init","hub '%s' '%s' %s" % (address, name, host))
         # But here we pass the lowercase, cause ISY doesn't allow the upper case!
         # A Hub is it's own primary
@@ -219,7 +224,7 @@ class HarmonyHub(polyinterface.Node):
             else:
                 # Then client_status will be True when client is ready
                 if self.client_status is True:
-                    if self.thread.isAlive():
+                    if self.thread.is_alive():
                         if self.client.state.current_state() == 'connected':
                             # All seems good.
                             # If activity method changed from or to a 2 then we need to reconnect to register or unregister the callback
@@ -237,7 +242,7 @@ class HarmonyHub(polyinterface.Node):
                         self.l_error("check_client","Thread is dead, need to restart")
                         self._set_st(0)
                 else:
-                    if self.thread.isAlive():
+                    if self.thread.is_alive():
                         self.l_info("check_client","Waiting for client startup to complete, status = {0}..".format(self.client_status))
                         return False
                     else:
@@ -303,39 +308,44 @@ class HarmonyHub(polyinterface.Node):
             self.l_info("_set_st","setDriver(ST,{0})".format(self.st))
             return self.setDriver('ST', self.st)
 
-    def get_config(self):
-        # FIXME: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
-        # FIXME: But config.yaml doesn't say which activities go with which hub...
-        # Read the config if available.
-        cfile = get_file(LOGGER,self.address + '.yaml')
-        self.l_debug('get_config','Loading hub config: {}'.format(cfile))
-        try:
-            with open(cfile, 'r') as infile:
-                return yaml.load(infile, Loader=yaml.SafeLoader)
-        except:
-            self.l_error('get_config',
-                         "Unable to load hub config '{}', will load from hub which may not match current profile, please run discover again.".format(cfile), exc_info=True)
-        return self.client.get_config()
+    def delete(self):
+        """
+        Delete all my children and then myself
+        """
+        LOGGER.warning("%s: Deleting myself and all my children",self.lpfx)
+        # We use the list of nodes in the config, not just our added nodes...
+        for node in self.controller.poly.config['nodes'].copy():
+            address = node['address']
+            if node['primary'] == self.address and node['address'] != self.address:
+                LOGGER.warning('%s Deleting my child %s "%s"',self.lpfx,address,node['name'])
+                self.controller.poly.delNode(address)
+        LOGGER.warning('%s Deleting myself',self.lpfx)
+        self.controller.poly.delNode(self.address)
 
     def init_activities_and_devices(self):
         self.l_info("init_activities_and_devices","start")
         self.activity_nodes = dict()
         self.device_nodes = dict()
-        harmony_config = self.get_config()
-        #harmony_config = self.parent.harmony_config['info']
         #
         # Add all activities except -1 (PowerOff)
         #
-        for a in harmony_config['activity']:
-            if a['id'] != '-1':
-                self.l_info("init","Activity: %s  Id: %s" % (a['label'], a['id']))
-                self.add_activity(a['id'],a['label'])
+        for a in self.harmony_config['activities']:
+            if a['id'] != '-1' and self.address in a['hub']:
+                try:
+                    self.l_info("init","Activity: %s  Id: %s" % (a['label'], a['id']))
+                    self.add_activity(str(a['id']),a['label'])
+                except:
+                    LOGGER.error("%s Error adding activity",self.lpfx,exc_info=True)
         #
         # Add all devices
         #
-        for d in harmony_config['device']:
-            self.l_info("init","Device id='%s' name='%s', Type=%s, Manufacturer=%s, Model=%s" % (d['id'],d['label'],d['type'],d['manufacturer'],d['model']))
-            self.add_device(d['id'],d['label'])
+        for d in self.harmony_config['devices']:
+            try:
+                self.l_info("init","Device :'%s' Id: '%s'" % (d['label'],d['id']))
+                self.add_device(str(d['id']),d['label'])
+            except:
+                LOGGER.error("%s Error adding device",self.lpfx,exc_info=True)
+
         self.l_info("init_activities_and_devices","end")
 
     def add_device(self,number,name):
@@ -408,7 +418,7 @@ class HarmonyHub(polyinterface.Node):
         Convert from activity index from nls, to real activity number
         """
         self.l_debug("_get_activity_id"," %d" % (index))
-        return self.parent.harmony_config['info']['activities'][index]['id']
+        return self.harmony_config['activities'][index]['id']
 
     def _get_activity_index(self,id):
         """
@@ -416,13 +426,13 @@ class HarmonyHub(polyinterface.Node):
         """
         self.l_debug("_get_activity_index", str(id))
         cnt = 0
-        for a in self.parent.harmony_config['info']['activities']:
+        for a in self.harmony_config['activities']:
             if int(a['id']) == int(id):
                 return cnt
             cnt += 1
         self.l_error("_get_activity_index","No activity id %s found." % (str(id)))
         # Print them out for debug
-        for a in self.parent.harmony_config['info']['activities']:
+        for a in self.harmony_config['activities']:
             self.l_error("_get_activity_index","  From: label=%s, id=%s" % (a['label'],a['id']))
         return False
 
@@ -465,6 +475,13 @@ class HarmonyHub(polyinterface.Node):
         self.l_debug("_cmd_off","activity=%d" % (self.current_activity))
         return self.end_activity()
 
+    def _cmd_delete(self, command):
+        """
+        Delete's this Hub and all it's children from Polyglot
+        """
+        self.l_debug("_cmd_delete","")
+        return self.delete()
+
     def l_info(self, name, string):
         LOGGER.info("Hub:%s:%s:%s: %s" %  (self.id,self.name,name,string))
 
@@ -492,4 +509,5 @@ class HarmonyHub(polyinterface.Node):
         'CHANGE_CHANNEL': _cmd_change_channel,
         'DOF': _cmd_off,
         'DFOF': _cmd_off,
+        'DEL': _cmd_delete,
     }
