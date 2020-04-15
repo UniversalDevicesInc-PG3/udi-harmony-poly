@@ -58,7 +58,6 @@ class HarmonyHub(polyinterface.Node):
         self.client_status = None
         self.event  = None
         self.config = None
-        self.purge_run = False
         self.st     = 0
         # Can't poll until start runs.
         self.do_poll = False
@@ -81,14 +80,6 @@ class HarmonyHub(polyinterface.Node):
         #
         self.setDriver('GV1', ip2long(self.host))
         self.setDriver('GV2', self.port)
-        #
-        # Purge when we are called by discover only, not everytime we are added
-        #
-        if self.discover:
-            try:
-                self.purge()
-            except:
-                LOGGER.error("%s purge failed",self.lpfx,exc_info=True)
         #
         # Connect to the hub if desired
         #
@@ -348,50 +339,6 @@ class HarmonyHub(polyinterface.Node):
         LOGGER.warning('%s Deleting myself',self.lpfx)
         self.controller.poly.delNode(self.address)
 
-    def purge(self):
-        LOGGER.info("%s starting...",self.lpfx)
-        config = self.get_config()
-        #LOGGER.debug("%s config=",self.lpfx,config)
-        #
-        # Check for removed activities or devices
-        #
-        # This can change while we are checking if another hub is being added...
-        #LOGGER.debug("%s",self.controller.poly.config)
-        # These are all the nodes from the config, not the real nodes we added...
-        nodes = self.controller.poly.config['nodes'].copy()
-        # Pattern match addresses
-        pc = re.compile('(.)(\d+)$')
-        # Check if we still have them.
-        for node in nodes:
-            address = node['address']
-            if node['primary'] == self.address and node['address'] != self.address:
-                LOGGER.info("%s Checking Node: %s",self.lpfx,address)
-                match = pc.match(address)
-                LOGGER.debug("  Match: %s", match)
-                if match:
-                    type = match.group(1)
-                    id   = int(match.group(2))
-                    #LOGGER.debug("Got: %s %s", type,match)
-                    if type == 'a':
-                        LOGGER.debug('%s   Check if Activity %s "%s" id=%s still exists',self.lpfx,node['address'],node['name'],id)
-                        index = next((index for (index, d) in enumerate(config['activity']) if int(d['id']) == id), None)
-                        LOGGER.debug('%s    Got: %s',self.lpfx,index)
-                        if index is None:
-                            LOGGER.warning('%s Deleting my Activity that longer exists %s "%s"',self.lpfx,address,node['name'])
-                            self.controller.poly.delNode(address)
-                    elif type == 'd':
-                        LOGGER.debug('%s   Check if Device %s "%s" id=%s still exists',self.lpfx,node['address'],node['name'],id)
-                        index = next((index for (index, d) in enumerate(config['device']) if int(d['id']) == id), None)
-                        LOGGER.debug('%s    Got: %s',self.lpfx,index)
-                        if index is None:
-                            LOGGER.warning('%s Deleting my Device that longer exists %s "%s"',self.lpfx,address,node['name'])
-                            self.controller.poly.delNode(address)
-                    else:
-                        LOGGER.warning('%s Unknown type "%s" "%s" id=%s still exists',self.lpfx,type,node['address'],node['name'])
-        LOGGER.info("%s done",self.lpfx)
-        self.purge_run = True
-
-
     def init_activities_and_devices(self):
         self.l_info("init_activities_and_devices","start")
         self.activity_nodes = dict()
@@ -555,13 +502,6 @@ class HarmonyHub(polyinterface.Node):
         self.l_debug("_cmd_delete","")
         return self.delete()
 
-    def _cmd_purge(self, command):
-        """
-        Delete's this Hub and all it's children from Polyglot
-        """
-        self.l_debug("_cmd_purge","")
-        return self.purge()
-
     def l_info(self, name, string):
         LOGGER.info("Hub:%s:%s:%s: %s" %  (self.id,self.name,name,string))
 
@@ -590,5 +530,4 @@ class HarmonyHub(polyinterface.Node):
         'DOF': _cmd_off,
         'DFOF': _cmd_off,
         'DEL': _cmd_delete,
-        'PURGE': _cmd_purge,
     }

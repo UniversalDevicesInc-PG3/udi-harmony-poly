@@ -34,7 +34,6 @@ NODEDEF_TMPL_HUB = """
         <cmd id="QUERY" />
         <cmd id="DOF" />
         <cmd id="DFOF" />
-        <cmd id="PURGE" />
         <cmd id="DEL" />
       </accepts>
     </cmds>
@@ -139,13 +138,22 @@ def write_profile(logger,hub_list,poll_hubs=True):
         config_data['info'] = dict()
         config_data['info']['activities'] = list()
         config_data['info']['functions'] = list()
+    # This was added in 2.4.0
+    # And we don't save from previous runs because we don't care
+    # about index order
+    config_data['info']['devices'] = list()
     # References to internal data structures
     activities = config_data['info']['activities']
+    devices    = config_data['info']['devices']
     functions  = config_data['info']['functions']
     # Activity 0 is always power off
     if len(activities) == 0:
         logger.info("Initializing Activities List...")
         activities.append({'label':'Power Off','id':-1});
+    # Set all counts back to zero
+    for name in ['functions', 'devices', 'activities']:
+        for item in config_data['info'][name]:
+            item['cnt'] = 0
     #
     # Start the nls with the template data.
     #
@@ -231,9 +239,10 @@ def write_profile(logger,hub_list,poll_hubs=True):
                 if index is None:
                     index = len(activities)
                     logger.debug('  Adding as new activity %d', index)
-                    activities.append({'label':aname,'id':int(a['id'])});
+                    activities.append({'label':aname,'id':int(a['id']),'cnt':1});
                 else:
                     logger.debug('  Using existing activity %s index=%d',activities[index],index)
+                    activities[index]['cnt'] += 1
                 nls.write(NLS_TMPL % (address.upper(), index, aname))
                 # This is the list of button numbers in this device.
                 subset.append(index)
@@ -250,6 +259,8 @@ def write_profile(logger,hub_list,poll_hubs=True):
             nls.write("\n# %s" % info)
             nls.write(NLS_NODE_TMPL % ('d' + d['id'], d['label'], 'd' + d['id']))
             logger.debug("%s   Device: %s  Id: %s" % (pfx, d['label'], d['id']))
+            logger.debug("%s",devices)
+            devices.append({'label':d['label'],'id':int(d['id']),'cnt': 1});
             #
             # Build all the button functions, these are global to all devices
             #
@@ -266,10 +277,11 @@ def write_profile(logger,hub_list,poll_hubs=True):
                         if index is None:
                             index = len(functions)
                             logger.debug('  Adding as new function %d', index)
-                            functions.append({'label':str(f['label']),'name':fname,'command':{str(d['id']):str(ay['command'])}});
-                            config_data['info']['functions'][index]['command'][str(d['id'])] = ay['command']
+                            functions.append({'label':str(f['label']),'name':fname,'command':{str(d['id']):str(ay['command'])},cnt: 1});
                         else:
                             logger.debug('  Using existing function %s index=%d',functions[index],index)
+                            functions[index]['cnt'] += 1
+                        functions[index]['command'][str(d['id'])] = ay['command']
                         logger.debug("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, index, f['name'], f['label'], ay['command']))
                         #nls.write("# Button name: %s, label: %s\n" % (f['name'], f['label']))
                         # This is the list of button numbers in this device.

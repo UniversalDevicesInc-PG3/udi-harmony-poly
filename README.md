@@ -96,17 +96,26 @@ The commands for this node
 #### Discover
    * Run's the harmony auto-discover to find your hubs, builds the profiel, and installs the profile
    * This should be run whenever you add a new hub, or update activities or devices on your hub
+#### Purge
+   * Deletes old Hubs and their Activities and Devices from Polyglot and the ISY that are no longer in the Harmony configuration
+   * Plese backup your ISY before running this in case there is an issue.
 #### Install Profile
    * This uploads the currently built profile into the ISY.
    * Typically this is not necessary, but sometimes the ISY needs the profile uploaded twice.
+#### Update Profile
+  * This rebuilds the profile based on currently known hubs
+  * Runs Install Profile
+  * Typically this is not necessary, but sometimes the ISY needs the profile uploaded twice.
 #### Build Profile
-   * This rebuilds the profile based on the currently managed hubs.
+   * Scans network for hubs
+   * Runs Update Profile
    * During the processes you can watch the nodeserver log (Not the polyglot log) to see what it's doing.
    * It will also update the 'Profile Status' to show what is happening from:
       * Building Profile
       * Installing Profile
-      * ISY Reboot Required
-   * Once it says ISY Reboot Required you should reboot the ISY.
+      * Installed
+
+Whenever the profile is updated you must close and re-open the Admin Console to see the changes
 
 ## Harmony Hub
 
@@ -124,6 +133,7 @@ The command for this Nodes
   * Deletes the hub along with it's Activities and Devices from Polyglot and the ISY
 #### Purge
   * Deletes old Activities and Devices from Polyglot and the ISY that are no longer in the Harmony configuration
+  * Plese backup your ISY before running this in case there is an issue.
 
 ## Harmony Activity
 

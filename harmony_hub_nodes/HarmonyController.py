@@ -62,6 +62,7 @@ class HarmonyController(Controller):
         self.discover_thread = None
         self.profile_thread = None
         self.do_poll = False
+        self.lpfx = ""
         self.hb = 0
 
     def start(self):
@@ -73,6 +74,7 @@ class HarmonyController(Controller):
         this is where you should start. No need to Super this method, the parent
         version does nothing.
         """
+        self.removeNoticesAll()
         serverdata = self.poly.get_server_data(check_profile=False)
         LOGGER.info('Started HarmonyHub NodeServer {}'.format(serverdata['version']))
                 #polyinterface.LOGGER("start: This is {0} error {1}".format("an"))
@@ -318,6 +320,9 @@ class HarmonyController(Controller):
                 self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'],discover=True)
             self.save_hubs()
 
+        # Check on the purge
+        self.purge(do_delete=False)
+
 
     def add_hub(self,address,name,host,port,update=True,discover=False):
         self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} update={4}".format(address,name,host,port,update))
@@ -420,6 +425,89 @@ class HarmonyController(Controller):
         self.l_info("_set_num_hubs","{}".format(self.num_hubs))
         self.setDriver('GV3', self.num_hubs)
         return True
+
+    def purge(self,do_delete=False):
+        LOGGER.info("%s starting do_delete=%s",self.lpfx,do_delete)
+        self.removeNoticesAll()
+        #LOGGER.debug("%s config=",self.lpfx,config)
+        #
+        # Check for removed activities or devices
+        #
+        # This can change while we are checking if another hub is being added...
+        #LOGGER.debug("%s",self.controller.poly.config)
+        # These are all the nodes from the config, not the real nodes we added...
+        nodes = self.controller.poly.config['nodes'].copy()
+        # Pattern match hub address s
+        pch = re.compile('h([a-f0-9]+)$')
+        # Pattern match activity and device addresses
+        pcad = re.compile('(.)(\d+)$')
+        activities = self.harmony_config['info']['activities']
+        devices    = self.harmony_config['info']['devices']
+        msg_pfx = "Deleting" if do_delete else "Want to delete"
+        delete_cnt = 0
+        # Check if we still have them.
+        for node in nodes:
+            address = node['address']
+            if address != self.address:
+                #LOGGER.info("%s Checking Node: %s",self.lpfx,node)
+                LOGGER.info("%s Checking Node: %s",self.lpfx,address)
+                match = pch.match(address)
+                LOGGER.debug("  Match Hub: %s", match)
+                if match:
+                    id   = match.group(1)
+                    #LOGGER.debug("Got: %s %s", type,match)
+                    LOGGER.debug('%s   Check if Hub %s "%s" id=%s still exists',self.lpfx,address,node['name'],id)
+                    ret = next((d for d in self.hubs if d['address'] == address), None)
+                    LOGGER.debug('%s    Got: %s',self.lpfx,ret)
+                    if ret is None:
+                        delete_cnt += 1
+                        msg = '%s Hub that is no longer found %s "%s"' % (msg_pfx,address,node['name'])
+                        LOGGER.warning('%s %s',self.lpfx,msg)
+                        self.addNotice(msg)
+                        if do_delete:
+                            self.controller.poly.delNode(address)
+                else:
+                    match = pcad.match(address)
+                    LOGGER.debug("  Match AD: %s", match)
+                    if match:
+                        type = match.group(1)
+                        id   = int(match.group(2))
+                        LOGGER.debug(" np: %s", node['primary'])
+                        if node['primary'] in self.nodes:
+                            pname = self.nodes[node['primary']].name
+                        else:
+                            pname = node['primary']
+                        #LOGGER.debug("Got: %s %s", type,match)
+                        if type == 'a':
+                            LOGGER.debug('%s   Check if Activity %s "%s" id=%s still exists',self.lpfx,address,node['name'],id)
+                            item = next((d for d in activities if int(d['id']) == id), None)
+                            LOGGER.debug('%s    Got: %s',self.lpfx,item)
+                            if item is None or item['cnt'] == 0:
+                                delete_cnt += 1
+                                msg = '%s Activity for "%s" that is no longer used %s "%s"' % (msg_pfx,pname,address,node['name'])
+                                LOGGER.warning('%s %s',self.lpfx,msg)
+                                self.addNotice(msg)
+                                if do_delete:
+                                    self.controller.poly.delNode(address)
+                        elif type == 'd':
+                            LOGGER.debug('%s   Check if Device %s "%s" id=%s still exists',self.lpfx,address,node['name'],id)
+                            item = next((d for d in devices if int(d['id']) == id), None)
+                            LOGGER.debug('%s    Got: %s',self.lpfx,item)
+                            if item is None or item['cnt'] == 0:
+                                delete_cnt += 1
+                                msg = '%s Device for "%s" that is no longer used %s "%s"' % (msg_pfx,pname,address,node['name'])
+                                LOGGER.warning('%s %s',self.lpfx,msg)
+                                self.addNotice(msg)
+                                if do_delete:
+                                    self.controller.poly.delNode(address)
+                        else:
+                            LOGGER.warning('%s Unknown type "%s" "%s" id=%s still exists',self.lpfx,type,address,node['name'])
+
+        if delete_cnt > 0 and not do_delete:
+            self.addNotice("Please run 'Purge Execute' on %s in Admin Console" % self.name)
+
+        LOGGER.info("%s done",self.lpfx)
+        self.purge_run = True
 
     def l_info(self, name, string):
         LOGGER.info("%s:%s: %s" %  (self.id,name,string))
@@ -556,6 +644,14 @@ class HarmonyController(Controller):
     def _cmd_discover(self, command):
         self.discover()
 
+    def _cmd_purge_check(self,command):
+        self.l_info("_cmd_purge","building...")
+        self.purge(do_delete=False)
+
+    def _cmd_purge_execute(self,command):
+        self.l_info("_cmd_purge","building...")
+        self.purge(do_delete=True)
+
     def _cmd_build_profile(self,command):
         self.l_info("_cmd_build_profile","building...")
         self.build_profile()
@@ -608,6 +704,8 @@ class HarmonyController(Controller):
         'QUERY': query,
         'DISCOVER': _cmd_discover,
         'BUILD_PROFILE': _cmd_build_profile,
+        'PURGE_CHECK': _cmd_purge_check,
+        'PURGE_EXECUTE': _cmd_purge_execute,
         'INSTALL_PROFILE': _cmd_install_profile,
         'UPDATE_PROFILE': _cmd_update_profile,
         'SET_DEBUGMODE': _cmd_set_debug_mode,
