@@ -19,5 +19,3 @@ if [ -e pyharmony ]; then
 else
   git clone https://github.com/jimboca/pyharmony.git
 fi
-
-./write_profile.py

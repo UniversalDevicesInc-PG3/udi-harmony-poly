@@ -57,7 +57,7 @@ class HarmonyHub(polyinterface.Node):
         self.thread = None
         self.client_status = None
         self.event  = None
-        self.config = None
+        self.harmony_config = self.parent.harmony_config['info']
         self.st     = 0
         # Can't poll until start runs.
         self.do_poll = False
@@ -308,23 +308,6 @@ class HarmonyHub(polyinterface.Node):
             self.l_info("_set_st","setDriver(ST,{0})".format(self.st))
             return self.setDriver('ST', self.st)
 
-    def get_config(self):
-        if self.config is None:
-            # FIXME: Use parent.harmony_config which conmes from the yaml, or keep using the real one from the hub?
-            # FIXME: But config.yaml doesn't say which activities go with which hub...
-            # Read the config if available.
-            cfile = get_file(LOGGER,self.address + '.yaml')
-            self.l_debug('get_config','Loading hub config: {}'.format(cfile))
-            config = None
-            try:
-                with open(cfile, 'r') as infile:
-                    config = yaml.load(infile, Loader=yaml.SafeLoader)
-            except:
-                self.l_error('get_config',
-                             "Unable to load hub config '{}', will load from hub which may not match current profile, please run discover again.".format(cfile), exc_info=True)
-            self.config = config
-        return self.config
-
     def delete(self):
         """
         Delete all my children and then myself
@@ -343,26 +326,23 @@ class HarmonyHub(polyinterface.Node):
         self.l_info("init_activities_and_devices","start")
         self.activity_nodes = dict()
         self.device_nodes = dict()
-        self.config = None # Force reloading of config
-        harmony_config = self.get_config()
-        #harmony_config = self.parent.harmony_config['info']
         #
         # Add all activities except -1 (PowerOff)
         #
-        for a in harmony_config['activity']:
-            if a['id'] != '-1':
+        for a in self.harmony_config['activities']:
+            if a['id'] != '-1' and self.address in a['hub']:
                 try:
                     self.l_info("init","Activity: %s  Id: %s" % (a['label'], a['id']))
-                    self.add_activity(a['id'],a['label'])
+                    self.add_activity(str(a['id']),a['label'])
                 except:
                     LOGGER.error("%s Error adding activity",self.lpfx,exc_info=True)
         #
         # Add all devices
         #
-        for d in harmony_config['device']:
+        for d in self.harmony_config['devices']:
             try:
-                self.l_info("init","Device id='%s' name='%s', Type=%s, Manufacturer=%s, Model=%s" % (d['id'],d['label'],d['type'],d['manufacturer'],d['model']))
-                self.add_device(d['id'],d['label'])
+                self.l_info("init","Device :'%s' Id: '%s'" % (d['label'],d['id']))
+                self.add_device(str(d['id']),d['label'])
             except:
                 LOGGER.error("%s Error adding device",self.lpfx,exc_info=True)
 
@@ -438,7 +418,7 @@ class HarmonyHub(polyinterface.Node):
         Convert from activity index from nls, to real activity number
         """
         self.l_debug("_get_activity_id"," %d" % (index))
-        return self.parent.harmony_config['info']['activities'][index]['id']
+        return self.harmony_config['activities'][index]['id']
 
     def _get_activity_index(self,id):
         """
@@ -446,13 +426,13 @@ class HarmonyHub(polyinterface.Node):
         """
         self.l_debug("_get_activity_index", str(id))
         cnt = 0
-        for a in self.parent.harmony_config['info']['activities']:
+        for a in self.harmony_config['activities']:
             if int(a['id']) == int(id):
                 return cnt
             cnt += 1
         self.l_error("_get_activity_index","No activity id %s found." % (str(id)))
         # Print them out for debug
-        for a in self.parent.harmony_config['info']['activities']:
+        for a in self.harmony_config['activities']:
             self.l_error("_get_activity_index","  From: label=%s, id=%s" % (a['label'],a['id']))
         return False
 
