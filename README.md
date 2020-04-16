@@ -171,7 +171,7 @@ Please create a backup of your ISY and Polyglot before doing any upgrades in cas
     - This only happens during discover, and you will see the message like "Seems that hub '%s' uuid changed ..." if you that message can you please PM it to me along with the Polyglot Backup file so I can take a look.  
 - 2.4.0 04/13/2020
   - [Delete devices that no longer exist](https://github.com/jimboca/udi-harmony-poly/issues/22)
-    - After discover completes it will check for hubs, activities and devices that are no longer in the configurations
+    - After discover completes, selecting "Purge Check" on the controller it will check for hubs, activities and devices that are no longer in the configurations
     - Will display notices on the polyglot page of things that can be deleted
     - To actually delete them select the "Purge Execute" command on the HarmonyHub Controller Node.
   - Now requires polyinterface 2.0.40 which should be updated on install
