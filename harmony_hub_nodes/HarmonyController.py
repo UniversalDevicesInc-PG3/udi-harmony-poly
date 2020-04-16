@@ -659,7 +659,8 @@ class HarmonyController(Controller):
         self.l_debug("set_watch_mode","{0}={1}".format(val,self.watch_mode))
         for hub in self.hubs:
             address = hub['address']
-            self.nodes[address].set_watch(self.watch_mode)
+            if address in self.nodes:
+                self.nodes[address].set_watch(self.watch_mode)
         self.setDriver('GV10',val)
 
     def _cmd_discover(self, command):
