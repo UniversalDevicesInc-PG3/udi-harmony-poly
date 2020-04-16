@@ -166,7 +166,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 # Release Notes
 - 2.4.1 04/13/2020
-  - Fix to keep track of hubs as well because Hub UUID's come back different now, and node address is based on that UUID, so we keep the same address and record that the uuid changed in config/hubs.json
+  - Keep track of hubs as well because Hub UUID's come back different now, and the node address is based on that UUID, so we keep the same address and record that the uuid changed in config/hubs.json as long as the Hub Name is the same.
+    - This only happens during discover, and you will see the message like "Seems that hub '%s' uuid changed ..." if you that message can you please PM it to me along with the Polyglot Backup file so I can take a look.  
 - 2.4.0 04/13/2020
   - [Delete devices that no longer exist](https://github.com/jimboca/udi-harmony-poly/issues/22)
     - After discover completes it will check for hubs, activities and devices that are no longer in the configurations
