@@ -165,13 +165,17 @@ Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
 # Release Notes
+
+Please create a **backup** of your **ISY AND Polyglot** before doing any upgrades in case there are issues.
+
 - 2.4.2 04/14/2020
   - Fix crash caused by write permission failed on config file.
 - 2.4.1 04/13/2020
-  - Fix to keep track of hubs as well because Hub UUID's come back different now, and node address is based on that UUID, so we keep the same address and record that the uuid changed in config/hubs.json
+  - Keep track of hubs as well because Hub UUID's come back different now, and the node address is based on that UUID, so we keep the same address and record that the uuid changed in config/hubs.json as long as the Hub Name is the same.
+    - This only happens during discover, and you will see the message like "Seems that hub '%s' uuid changed ..." if you that message can you please PM it to me along with the Polyglot Backup file so I can take a look.  
 - 2.4.0 04/13/2020
   - [Delete devices that no longer exist](https://github.com/jimboca/udi-harmony-poly/issues/22)
-    - After discover completes it will check for hubs, activities and devices that are no longer in the configurations
+    - After discover completes, or by selecting "Purge Check" on the controller it will check for hubs, activities and devices that are no longer in the configurations
     - Will display notices on the polyglot page of things that can be deleted
     - To actually delete them select the "Purge Execute" command on the HarmonyHub Controller Node.
   - Now requires polyinterface 2.0.40 which should be updated on install
