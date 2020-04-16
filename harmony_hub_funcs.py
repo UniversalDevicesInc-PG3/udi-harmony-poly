@@ -147,16 +147,19 @@ HUBS_FILE = 'hubs.json'
 
 def load_hubs_file(logger):
     fpath = get_file(logger,HUBS_FILE)
-    try:
-        with open(fpath) as data:
-            hubs = json.load(data)
-            data.close()
-    except (Exception) as err:
-        logger.error('harmony_hub_funcs:load_hubs_file: failed to read hubs file {0}: {1}'.format(fpath,err))
-        return False
-    else:
-        return hubs
-
+    if os.path.exists(fpath):
+        try:
+            with open(fpath) as data:
+                hubs = json.load(data)
+                data.close()
+        except (Exception) as err:
+            logger.error('harmony_hub_funcs:load_hubs_file: failed to read hubs file {0}: {1}'.format(fpath,err))
+            return False
+        else:
+            return hubs
+    logger.warning('hubs file does not exist: %s',HUBS_FILE)
+    return False
+    
 def save_hubs_file(logger,hubs):
     fpath = get_file(logger,HUBS_FILE)
     logger.info('Writing hubs: %s',fpath)

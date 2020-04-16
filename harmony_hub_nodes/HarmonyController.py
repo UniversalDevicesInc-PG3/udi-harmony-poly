@@ -112,7 +112,8 @@ class HarmonyController(Controller):
         self.l_debug("start","GV9={0} activity_method={1}".format(val,self.activity_method))
         # Initialize hubs
         self.clear_hubs()
-        self.hubs = list()
+        # Load em if we have em
+        self.load_hubs()
         # Watch Mode
         self.set_watch_mode(self.getDriver('GV10'))
 
@@ -284,7 +285,12 @@ class HarmonyController(Controller):
                         self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
                         addit = False
                     if addit:
-                        self.hubs.append({'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222})
+                        hub_hash = {'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222, 'found': True, 'custom': True}
+                        index = next((idx for (idx, hub) in enumerate(self.hubs) if hub['name'] == hub_name), None)
+                        if index is None:
+                            self.hubs.append(hub_hash)
+                        else:
+                            self.hubs[index] = hub_hash
 
         #
         # Next the discovered ones
@@ -370,7 +376,6 @@ class HarmonyController(Controller):
     switched to using a local file.
     """
     def load_hubs(self):
-        self.hubs = list()
         # Hack... if customParams has clear_hubs=1 then just clear them :(
         # This is the only way to clear a bad IP address until my changes to pyharmony are accepted.
         cdata = self.polyConfig['customParams']
@@ -403,6 +408,8 @@ class HarmonyController(Controller):
                     self.build_profile()
             else:
                 self.hubs = load_hubs_file(LOGGER)
+                if not self.hubs:
+                    self.hubs = list()
                 # Temp test to put them back...
                 #hdata = dict()
                 #for hub in self.hubs:
