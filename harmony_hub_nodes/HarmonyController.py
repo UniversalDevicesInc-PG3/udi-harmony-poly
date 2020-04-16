@@ -317,6 +317,7 @@ class HarmonyController(Controller):
                             'address': hub_address,
                             'name':    hub_name,
                         }
+                        self.hubs.append(hub_hash)
                     else:
                         # Keep the same address for this hub name.
                         hub_hash = self.hubs[index]
