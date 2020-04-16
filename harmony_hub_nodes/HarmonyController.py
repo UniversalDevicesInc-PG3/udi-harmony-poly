@@ -292,6 +292,7 @@ class HarmonyController(Controller):
         tst = time.strftime("%m%d%Y-%H%M%S")
         ust = 'uuid-save-%s' % (tst)
         if discover_result is not None:
+            LOGGER.debug("hubs.list=%s",hubs.list)
             for config in discover_result:
                 LOGGER.debug("hub config: %s",config)
                 addit = True
