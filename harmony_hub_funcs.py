@@ -159,6 +159,7 @@ def load_hubs_file(logger):
 
 def save_hubs_file(logger,hubs):
     fpath = get_file(logger,HUBS_FILE)
+    logger.info('Writing hubs: %s',fpath)
     try:
         with open(fpath, 'w') as outfile:
             json.dump(hubs, outfile, sort_keys=True, indent=4)

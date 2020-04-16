@@ -14,7 +14,7 @@
         {
             "title": "udi-harmony-poly: A NodeServer for For Harmony Hub and ISY Integration",
             "author": "JimBoCA",
-            "version": "2.4.0",
+            "version": "2.4.1",
             "date": "December 29, 2017",
             "source": "https://github.com/jimboca/udi-harmony-poly",
             "license": "https://github.com/jimboca/udi-harmony-poly/LICENSE"

@@ -112,6 +112,7 @@ class HarmonyController(Controller):
         self.l_debug("start","GV9={0} activity_method={1}".format(val,self.activity_method))
         # Initialize hubs
         self.clear_hubs()
+        self.hubs = list()
         # Watch Mode
         self.set_watch_mode(self.getDriver('GV10'))
 
@@ -222,6 +223,9 @@ class HarmonyController(Controller):
     def _discover(self):
         # Clear the hubs now so we clear some that may have been improperly added.
         self.clear_hubs()
+        # Set all hubs to not found
+        for hub in self.hubs:
+            hub['found'] = False
         #
         # Look for the hubs...
         #
@@ -285,6 +289,8 @@ class HarmonyController(Controller):
         #
         # Next the discovered ones
         #
+        tst = time.strftime("%m%d%Y-%H%M%S")
+        ust = 'uuid-save-%s' % (tst)
         if discover_result is not None:
             for config in discover_result:
                 LOGGER.debug("hub config: %s",config)
@@ -300,42 +306,61 @@ class HarmonyController(Controller):
                 else:
                     self.l_error('discover','current_fw_version not in config?  Will try to use anyway {}'.format(config))
                 if addit:
-                    self.hubs.append(
-                        {
-                            'address': 'h'+id_to_address(config['uuid'],13),
-                            'name':    get_valid_node_name(config['friendlyName']),
-                            'host':    config['ip'],
-                            'port':    config['port'],
-                            'save':    True
+                    # See if the hub is already in the list.
+                    hub_address = 'h'+id_to_address(config['uuid'],13)
+                    hub_name    = get_valid_node_name(config['friendlyName'])
+                    index = next((idx for (idx, hub) in enumerate(self.hubs) if hub['name'] == hub_name), None)
+                    LOGGER.debug('found index=%s',index)
+                    if index is None:
+                        # Not seen, or is a different name
+                        hub_hash = {
+                            'address': hub_address,
+                            'name':    hub_name,
                         }
-                    )
+                    else:
+                        # Keep the same address for this hub name.
+                        hub_hash = self.hubs[index]
+                        if 'uuid' in hub_hash:
+                            if hub_hash['uuid'] != config['uuid']:
+                                LOGGER.warning("Seems that hub '%s' uuid changed from '%s' to '%s' will continue using old address %s",hub_name,hub_hash['uuid'],config['uuid'],hub_address)
+                                hub_hash[ust] = hub_hash['uuid']
+                    # These always use the latest data.
+                    hub_hash['date_time'] = tst
+                    hub_hash['host']      = config['ip']
+                    hub_hash['port']      = config['port']
+                    hub_hash['found']     = True
+                    hub_hash['save']      = True
+                    hub_hash['uuid']      = config['uuid']
+        #
+        # Write warnings about previously known Hubs
+        #
+        for hub in self.hubs:
+            if not 'found' in hub or not hub['found']:
+                LOGGER.warning("Previously known hub '%s' did not respond to discover",hub['name'])
+
+        self.save_hubs()
         #
         # Build the profile
         # It needs the hub_list set, so we will reset it later.
         if self._build_profile():
             #
             # Now really add them.
-            hl = self.hubs
-            self.clear_hubs()
-            for cnode in hl:
-                self.add_hub(cnode['address'], cnode['name'], cnode['host'], cnode['port'],discover=True)
-            self.save_hubs()
+            self.add_hubs()
 
         # Check on the purge
         self.purge(do_delete=False)
 
 
-    def add_hub(self,address,name,host,port,update=True,discover=False):
-        self.l_debug("add_hub","address={0} name='{1}' host={2} port={3} update={4}".format(address,name,host,port,update))
+    def add_hub(self,address,name,host,port,discover=False):
+        self.l_debug("add_hub","address={0} name='{1}' host={2} port={3}".format(address,name,host,port))
         self.addNode(HarmonyHub(self, address, name, host, port, watch=self.watch_mode, discover=discover))
-        self._set_num_hubs(self.num_hubs + 1)
-        if update:
-            self.update_hub_list({'address': address, 'name': name, 'host': host, 'port': port})
 
     def add_hubs(self):
         self._set_num_hubs(0)
         for hub in self.hubs:
-            self.add_hub(hub['address'], hub['name'], hub['host'], hub['port'], update=False)
+            if not 'found' in hub or hub['found']:
+                self.add_hub(hub['address'], hub['name'], hub['host'], hub['port'])
+                self._set_num_hubs(self.num_hubs + 1)
 
     """
     This pulls in the save hub data.  Old versions stored this in the
@@ -351,6 +376,7 @@ class HarmonyController(Controller):
         if param_name in self.polyConfig['customParams'] and int(self.polyConfig['customParams'][param_name]) == 1:
             self.l_info("load_hubs","Clearing known hubs, you will need to run discover again since customParam {0} = {1}".format(param_name,self.polyConfig['customParams'][param_name]))
             self.clear_hubs()
+            self.hubs = list()
         else:
             # If hubs exists in the customData, convert to .hubs list and save the json
             if 'hubs' in self.polyConfig['customData']:
@@ -387,27 +413,12 @@ class HarmonyController(Controller):
         # Always clear it so the default value shows for the user.
         self.addCustomParam({param_name: 0})
 
-    # Add the hub to the list, replacing if necessary if the address exists.
-    def update_hub_list (self,hub):
-        new = list()
-        seen = False
-        for ehub in self.hubs:
-            if hub['address'] == ehub['address']:
-                new.append(hub)
-                seen = True
-            else:
-                new.append(ehub)
-        if not seen:
-            new.append(hub)
-        self.hubs = new
-
     def save_hubs(self):
         return save_hubs_file(LOGGER,self.hubs)
 
     def clear_hubs(self):
-        # Clear all the saved hub data.
+        # Clear how many hubs we manage
         self._set_num_hubs(0)
-        self.hubs = list()
 
     def load_config(self):
         self.harmony_config = load_config_file(LOGGER)
