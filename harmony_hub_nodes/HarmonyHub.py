@@ -330,21 +330,28 @@ class HarmonyHub(polyinterface.Node):
         # Add all activities except -1 (PowerOff)
         #
         for a in self.harmony_config['activities']:
-            if a['id'] != '-1' and self.address in a['hub']:
+            if not 'hub' in a:
+                LOGGER.error("Can not add activity with no hub, is your config file old?  Please re-run Build Profile and restart. %s",a)
+            else:
                 try:
-                    self.l_info("init","Activity: %s  Id: %s" % (a['label'], a['id']))
-                    self.add_activity(str(a['id']),a['label'])
+                    if a['id'] != '-1' and self.address in a['hub']:
+                        self.l_info("init","Activity: %s  Id: %s" % (a['label'], a['id']))
+                        self.add_activity(str(a['id']),a['label'])
                 except:
                     LOGGER.error("%s Error adding activity",self.lpfx,exc_info=True)
         #
         # Add all devices
         #
         for d in self.harmony_config['devices']:
-            try:
-                self.l_info("init","Device :'%s' Id: '%s'" % (d['label'],d['id']))
-                self.add_device(str(d['id']),d['label'])
-            except:
-                LOGGER.error("%s Error adding device",self.lpfx,exc_info=True)
+            if not 'hub' in d:
+                LOGGER.error("Can not add device with no hub, is your config file old?  Please re-run Build Profile and restart. %s",a)
+            else:
+                try:
+                    if self.address in d['hub']:
+                        self.l_info("init","Device :'%s' Id: '%s'" % (d['label'],d['id']))
+                        self.add_device(str(d['id']),d['label'])
+                except:
+                    LOGGER.error("%s Error adding device",self.lpfx,exc_info=True)
 
         self.l_info("init_activities_and_devices","end")
 
