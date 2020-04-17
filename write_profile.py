@@ -204,7 +204,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
                 with open(harmony_config_file, 'r') as infile:
                     harmony_config = yaml.load(infile,Loader=yaml.FullLoader)
             except:
-                logger.error("{} Error loading config {} will poll hub".format(pfx,harmony_config_file),True)
+                logger.error('{} Error Loading hub config: {}'.format(pfx,harmony_config_file),exc_info=True)
                 poll_hubs = True
         if poll_hubs:
             # Connect to the hub and get the configuration
@@ -280,7 +280,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
                         if index is None:
                             index = len(functions)
                             logger.debug('  Adding as new function %d', index)
-                            functions.append({'label':str(f['label']),'name':fname,'command':{str(d['id']):str(ay['command'])},cnt: 1});
+                            functions.append({'label':str(f['label']),'name':fname,'command':{str(d['id']):str(ay['command'])},'cnt': 1});
                         else:
                             logger.debug('  Using existing function %s index=%d',functions[index],index)
                             functions[index]['cnt'] += 1

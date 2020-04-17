@@ -57,7 +57,7 @@ class HarmonyHub(polyinterface.Node):
         self.thread = None
         self.client_status = None
         self.event  = None
-        self.harmony_config = self.parent.harmony_config['info']
+        self.harmony_config = self.parent.harmony_config
         self.st     = 0
         # Can't poll until start runs.
         self.do_poll = False
@@ -322,14 +322,22 @@ class HarmonyHub(polyinterface.Node):
         LOGGER.warning('%s Deleting myself',self.lpfx)
         self.controller.poly.delNode(self.address)
 
+    def config_good(self):
+        if self.harmony_config is None:
+            LOGGER.error('%s Config was not loaded: %s',self.lpfx,self.harmony_config)
+            return False
+        return True
+
     def init_activities_and_devices(self):
         self.l_info("init_activities_and_devices","start")
         self.activity_nodes = dict()
         self.device_nodes = dict()
+        if not self.config_good():
+            return False
         #
         # Add all activities except -1 (PowerOff)
         #
-        for a in self.harmony_config['activities']:
+        for a in self.harmony_config['info']['activities']:
             if not 'hub' in a:
                 LOGGER.error("Can not add activity with no hub, is your config file old?  Please re-run Build Profile and restart. %s",a)
             else:
@@ -342,7 +350,7 @@ class HarmonyHub(polyinterface.Node):
         #
         # Add all devices
         #
-        for d in self.harmony_config['devices']:
+        for d in self.harmony_config['info']['devices']:
             if not 'hub' in d:
                 LOGGER.error("Can not add device with no hub, is your config file old?  Please re-run Build Profile and restart. %s",a)
             else:
@@ -425,21 +433,25 @@ class HarmonyHub(polyinterface.Node):
         Convert from activity index from nls, to real activity number
         """
         self.l_debug("_get_activity_id"," %d" % (index))
-        return self.harmony_config['activities'][index]['id']
+        if not self.config_good():
+            return False
+        return self.harmony_config['info']['activities'][index]['id']
 
     def _get_activity_index(self,id):
         """
         Convert from activity index from nls, to real activity number
         """
         self.l_debug("_get_activity_index", str(id))
+        if not self.config_good():
+            return False
         cnt = 0
-        for a in self.harmony_config['activities']:
+        for a in self.harmony_config['info']['activities']:
             if int(a['id']) == int(id):
                 return cnt
             cnt += 1
         self.l_error("_get_activity_index","No activity id %s found." % (str(id)))
         # Print them out for debug
-        for a in self.harmony_config['activities']:
+        for a in self.harmony_config['info']['activities']:
             self.l_error("_get_activity_index","  From: label=%s, id=%s" % (a['label'],a['id']))
         return False
 

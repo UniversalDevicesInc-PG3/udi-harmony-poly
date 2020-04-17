@@ -168,6 +168,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 Please create a **backup** of your **ISY AND Polyglot** before doing any upgrades in case there are issues.
 
+- 2.4.3 04/17/2020
+  - Fix crash on new installs
 - 2.4.2 04/14/2020
   - Fix crash caused by write permission failed on config file.
 - 2.4.1 04/13/2020
