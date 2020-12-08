@@ -285,7 +285,8 @@ class HarmonyController(Controller):
                         self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
                         addit = False
                     if addit:
-                        hub_hash = {'address': address, 'name': get_valid_node_name(cfgd['name']), 'host': cfgd['host'], 'port': 5222, 'found': True, 'custom': True}
+                        hub_name = get_valid_node_name(cfgd['name'])
+                        hub_hash = {'address': address, 'name': hub_name, 'host': cfgd['host'], 'port': 5222, 'found': True, 'custom': True}
                         index = next((idx for (idx, hub) in enumerate(self.hubs) if hub['name'] == hub_name), None)
                         if index is None:
                             self.hubs.append(hub_hash)
