@@ -117,6 +117,9 @@ def write_config_file(logger,config_data):
         return False
     return True
 
+def config_file_exists():
+    return os.path.exists(CONFIG_FILE) or os.path.exists(CONFIG_DIR + "/" + CONFIG_FILE)
+
 def load_config_file(logger):
     config = get_file(logger,CONFIG_FILE)
     if os.path.exists(config):

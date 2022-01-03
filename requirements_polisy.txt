@@ -1,5 +1,0 @@
-polyinterface >= 2.0.40
-pyaml
-#pyharmony     == 1.0.21
-sleekxmpp
-netifaces

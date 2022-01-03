@@ -1,37 +1,22 @@
-#!/usr/bin/env python3
-"""
-This is the Harmony Hub NodeServer for ISY and Polyglot v2 written in Python2/3
-by JimBo jimboca3@gmail.com
-"""
-
-import polyinterface
+#!/usr/bin/env python
+# 
+from udi_interface import Interface,LOGGER
 import sys
 
-LOGGER = polyinterface.LOGGER
-
-# Harmony Hub Main Controller
-from harmony_hub_nodes import HarmonyController
+""" Grab My Controller Node """
+from nodes import Controller
 
 if __name__ == "__main__":
     try:
-        polyglot = polyinterface.Interface('HarmonyHub')
-        """
-        Instantiates the Interface to Polyglot.
-        """
+        polyglot = Interface([])
         polyglot.start()
-        """
-        Starts MQTT and connects to Polyglot.
-        """
-        control = HarmonyController(polyglot)
-        """
-        Creates the Controller Node and passes in the Interface
-        """
-        control.runForever()
-        """
-        Sits around and does nothing forever, keeping your program running.
-        """
+        polyglot.updateProfile()
+        polyglot.setCustomParamsDoc()
+        Controller(polyglot, 'harmonyctrl', 'harmonyctrl', 'HarmonyHub Controller')
+        polyglot.runForever()
     except (KeyboardInterrupt, SystemExit):
-        sys.exit(0)
-        """
-        Catch SIGTERM or Control-C and exit cleanly.
-        """
+        LOGGER.warning("Received interrupt or exit...")
+        polyglot.stop()
+    except Exception as err:
+        LOGGER.error('Excption: {0}'.format(err), exc_info=True)
+    sys.exit(0)

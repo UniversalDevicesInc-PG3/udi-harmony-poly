@@ -13,95 +13,93 @@
 
 import sys
 sys.path.insert(0,"pyharmony")
-from polyinterface import Controller,LOG_HANDLER,LOGGER
+from udi_interface import Node,LOGGER,Custom,LOG_HANDLER
 import json,re,time,sys,os.path,yaml,logging,json,warnings,time
 from traceback import format_exception
 from copy import deepcopy
 from threading import Thread
-from harmony_hub_nodes import HarmonyHub
+from nodes import Hub
 from harmony_hub_funcs import *
 from write_profile import write_profile
 
-class HarmonyController(Controller):
-    """
-    The Controller Class is the primary node from an ISY perspective. It is a Superclass
-    of polyinterface.Node so all methods from polyinterface.Node are available to this
-    class as well.
-
-    Class Variables:
-    self.nodes: Dictionary of nodes. Includes the Controller node. Keys are the node addresses
-    self.name: String name of the node
-    self.address: String Address of Node, must be less than 14 characters (ISY limitation)
-    self.polyConfig: Full JSON config dictionary received from Polyglot.
-    self.added: Boolean Confirmed added to ISY as primary node
-
-    Class Methods (not including the Node methods):
-    start(): Once the NodeServer config is received from Polyglot this method is automatically called.
-    addNode(polyinterface.Node): Adds Node to self.nodes and polyglot/ISY. This is called for you
-                                 on the controller itself.
-    delNode(address): Deletes a Node from the self.nodes/polyglot and ISY. Address is the Node's Address
-    longPoll(): Runs every longPoll seconds (set initially in the server.json or default 10 seconds)
-    shortPoll(): Runs every shortPoll seconds (set initially in the server.json or default 30 seconds)
-    query(): Queries and reports ALL drivers for ALL nodes to the ISY.
-    runForever(): Easy way to run forever without maxing your CPU or doing some silly 'time.sleep' nonsense
-                  this joins the underlying queue query thread and just waits for it to terminate
-                  which never happens.
-    """
-    def __init__(self, polyglot):
-        """
-        Optional.
-        Super runs all the parent class necessities. You do NOT have
-        to override the __init__ method, but if you do, you MUST call super.
-        """
+class Controller(Node):
+    def __init__(self, poly, primary, address, name):
         LOGGER.info('HarmonyController: Initializing')
-        super(HarmonyController, self).__init__(polyglot)
-        self.name = 'HarmonyHub Controller'
-        self.address = 'harmonyctrl'
-        self.primary = self.address
+        super(Controller, self).__init__(poly, primary, address, name)
         # These start in threads cause they take a while
         self.discover_thread = None
         self.profile_thread = None
         self.do_poll = False
         self.lpfx = ""
         self.hb = 0
+        self.n_queue = []
+        self.Notices         = Custom(poly, 'notices')
+        self.Data            = Custom(poly, 'customdata')
+        self.Params          = Custom(poly, 'customparams')
+        self.Notices         = Custom(poly, 'notices')
+        #self.TypedParameters = Custom(poly, 'customtypedparams')
+        #self.TypedData       = Custom(poly, 'customtypeddata')
+        poly.subscribe(poly.START,             self.handler_start, address) 
+        poly.subscribe(poly.POLL,              self.handler_poll)
+        poly.subscribe(poly.DISCOVER,          self.discover)
+        poly.subscribe(poly.STOP,              self.handler_stop)
+        poly.subscribe(poly.CUSTOMPARAMS,      self.handler_params)
+        #poly.subscribe(poly.CUSTOMTYPEDPARAMS, self.handler_typed_params)
+        #poly.subscribe(poly.CUSTOMTYPEDDATA,   self.handler_typed_data)
+        poly.subscribe(poly.LOGLEVEL,          self.handler_log_level)
+        poly.subscribe(poly.CONFIGDONE,        self.handler_config_done)
+        poly.subscribe(poly.ADDNODEDONE,       self.node_queue)
+        poly.ready()
+        poly.addNode(self, conn_status="ST")
 
-    def start(self):
-        """
-        Optional.
-        Polyglot v2 Interface startup done. Here is where you start your integration.
-        This will run, once the NodeServer connects to Polyglot and gets it's config.
-        In this example I am calling a discovery method. While this is optional,
-        this is where you should start. No need to Super this method, the parent
-        version does nothing.
-        """
-        self.removeNoticesAll()
-        serverdata = self.poly.get_server_data(check_profile=False)
-        LOGGER.info('Started HarmonyHub NodeServer {}'.format(serverdata['version']))
-                #polyinterface.LOGGER("start: This is {0} error {1}".format("an"))
-        self.l_info('start','Starting')
+    '''
+    node_queue() and wait_for_node_event() create a simple way to wait
+    for a node to be created.  The nodeAdd() API call is asynchronous and
+    will return before the node is fully created. Using this, we can wait
+    until it is fully created before we try to use it.
+    '''
+    def node_queue(self, data):
+        self.n_queue.append(data['address'])
+
+    def wait_for_node_done(self):
+        while len(self.n_queue) == 0:
+            time.sleep(0.1)
+        self.n_queue.pop()
+
+    def add_node(self,node):
+        anode = self.poly.addNode(node)
+        LOGGER.debug(f'got {anode}')
+        self.wait_for_node_done()
+        if anode is None:
+            LOGGER.error('Failed to add node address')
+        return anode
+
+    def handler_start(self):
+        self.poly.Notices.clear()
+        #serverdata = self.poly.get_server_data(check_profile=False)
+        LOGGER.info(f"Started HarmonyHub NodeServer {self.poly.serverdata['version']}")
         # Some are getting unclosed socket warnings from sleekxmpp when thread exits that I can't get rid if so ignore them.
         warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*<socket.socket.*>")
         # Show these for now
-        self.l_debug("start","GV4={0} GV8={1}".format(self.getDriver('GV4'),self.getDriver('GV8')))
-        self.set_debug_level(self.getDriver('GV4'))
+        LOGGER.debug("GV8={}".format(self.getDriver('GV8')))
         # Set Profile Status as Up To Date, if it's status 6=ISY Reboot Required
         val = self.getDriver('GV7')
         if val is None or int(val) == 6 or int(val) == 0:
             self.setDriver('GV7', 1)
         # Short Poll
-        val = self.getDriver('GV5')
-        self.l_debug("start","shortPoll={0} GV5={1}".format(self.polyConfig['shortPoll'],val))
-        if val is None:
-            self.setDriver('GV5',self.polyConfig['shortPoll'])
-        elif (int(val) != 0):
-            self.polyConfig['shortPoll'] = int(val)
+        #val = self.getDriver('GV5')
+        #LOGGER.debug("shortPoll={0} GV5={1}".format(self.polyConfig['shortPoll'],val))
+        #if val is None:
+        #    self.setDriver('GV5',self.polyConfig['shortPoll'])
+        #elif (int(val) != 0):
+        #    self.polyConfig['shortPoll'] = int(val)
         # Long Poll
-        val = self.getDriver('GV6')
-        self.l_debug("start","longPoll={0} GV6={1}".format(self.polyConfig['longPoll'],val))
-        if val is None:
-            self.setDriver('GV6',self.polyConfig['longPoll'])
-        elif (int(val) != 0):
-            self.polyConfig['longPoll'] = int(val)
+        #val = self.getDriver('GV6')
+        #LOGGER.debug("longPoll={0} GV6={1}".format(self.polyConfig['longPoll'],val))
+        #if val is None:
+        #    self.setDriver('GV6',self.polyConfig['longPoll'])
+        #elif (int(val) != 0):
+        #    self.polyConfig['longPoll'] = int(val)
         # Activiy method
         val = self.getDriver('GV9')
         if val is None:
@@ -109,60 +107,55 @@ class HarmonyController(Controller):
             self.setDriver('GV9',self.activity_method)
         else:
             self.activity_method = int(val)
-        self.l_debug("start","GV9={0} activity_method={1}".format(val,self.activity_method))
+        LOGGER.debug("GV9={0} activity_method={1}".format(val,self.activity_method))
+
+    def handler_config_done(self):
+        LOGGER.info(f'{self.lpfx} enter')
+        self.poly.addLogLevel('DEBUG_MODULES',9,'Debug + Modules')
+        # Currently not gaurunteed all config handlers are called, so wait
+        # until custom params are processed
+        count = 0
+        while self.config_st is None and count < 60:
+            LOGGER.warning("Waiting for config to be loaded...")
+            time.sleep(1)
+            count += 1
+        if count == 60:
+            LOGGER.error("Timeout waiting for config to load, check log for other errors.")
+            exit
         # Initialize hubs
-        self.clear_hubs()
+        self.clear_saved_hubs()
         # Load em if we have em
         self.load_hubs()
         # Watch Mode
         self.set_watch_mode(self.getDriver('GV10'))
-
-        # New vesions need to force an update
-        if not 'cver' in self.polyConfig['customData']:
-            self.polyConfig['customData']['cver'] = 1
-        self.l_debug("start","cver={0}".format(self.polyConfig['customData']['cver']))
-        if int(self.polyConfig['customData']['cver']) < 2:
-            self.l_debug("start","updating myself since cver {0} < 2".format(self.polyConfig['customData']['cver']))
-            # Force an update.
-            self.addNode(self,update=True)
-            self.polyConfig['customData']['cver'] = 3
-            self.saveCustomData(self.polyConfig['customData'])
         #
         # Add Hubs from the config
         #
         self._set_num_hubs(0)
         self.first_run = False
-        #self.l_debug("start","nodes={}".format(self.polyConfig['nodes']))
-        if self.polyConfig['nodes']:
-            self.l_info("start","Adding known hubs...")
+        #LOGGER.debug("start","nodes={}".format(self.polyConfig['nodes']))
+        if config_file_exists():
+            LOGGER.info("Adding known hubs...")
             # Load the config info about the hubs.
             self.load_config()
             # Load the hub info.
             self.load_hubs()
             if self.hubs is False:
-                self.l_error("start","No hubs loaded, need to discover?")
-                return
-            # Build/Update profile if necessary
-            serverdata = self.poly.check_profile(serverdata,build_profile=self._update_profile)
-            # Restore known hubs from the poly config nodes
-            self.add_hubs()
+                LOGGER.error("No hubs loaded, need to discover?")
+            else:
+                # Build/Update profile if necessary
+                serverdata = self.poly.checkProfile(self.poly.serverdata,build_profile=self._update_profile)
+                # Restore known hubs from the poly config nodes
+                self.add_hubs()
         else:
             # No nodes exist, that means this is the first time we have been run
             # after install, so do a discover
-            self.l_info("start","First run, will start discover...")
+            LOGGER.info("First run, will start discover...")
             self.first_run = True
             self.discover()
-        self.l_info("start","done")
-
-    # TODO: Is it ok to reference nodesAdding?
-    def allNodesAdded(self):
-        LOGGER.debug('nodesAdding: %d', len(self.nodesAdding))
-        return True if len(self.nodesAdding) > 0 else False
+        LOGGER.info(f'{self.lpfx} exit')
 
     def canPoll(self):
-        if not self.allNodesAdded:
-            LOGGER.debug('Waiting for all nodes to be added...')
-            return False
         if self.discover_thread is not None:
             if self.discover_thread.is_alive():
                 LOGGER.debug('discover thread still running...')
@@ -179,41 +172,44 @@ class HarmonyController(Controller):
                 self.profile_thread = None
         return True
 
+    def handler_poll(self, polltype):
+        if polltype == 'longPoll':
+            self.longPoll()
+        elif polltype == 'shortPoll':
+            self.shortPoll()
+            
     def shortPoll(self):
-        #self.l_debug('shortPoll','...')
+        LOGGER.debug('...')
         if not self.canPoll():
             return False
-        for node in self.nodes:
-            if self.nodes[node].do_poll:
-                self.nodes[node].shortPoll()
+        for node in self.poly.getNodes():
+            if self.poly.getNode(node).do_poll:
+                self.poly.getNode(node).shortPoll()
 
     def longPoll(self):
-        #self.l_debug('longpoll','...')
+        LOGGER.debug('...')
         if not self.canPoll():
             return False
-        for node in self.nodes:
-            if self.nodes[node].do_poll:
-                self.nodes[node].longPoll()
+        for node in self.poly.getNodes():
+            if self.poly.getNode(node).do_poll:
+                self.poly.getNode(node).longPoll()
         self.heartbeat()
 
     def query(self):
-        self.l_debug('query','...')
+        LOGGER.debug('...')
         if not self.canPoll():
             return False
         self.reportDrivers()
-        for node in self.nodes:
-            if self.nodes[node].do_poll:
-                self.nodes[node].query()
+        for node in self.poly.getNodes():
+            if self.poly.getNode(node).do_poll:
+                self.poly.getNode(node).query()
 
     def discover(self):
-        """
-        Start the discover in a thread so we don't cause timeouts :(
-        """
         self.discover_thread = Thread(target=self._discover)
         self.discover_thread.start()
 
     def heartbeat(self):
-        self.l_info('heartbeat','hb={}'.format(self.hb))
+        LOGGER.info('hb={}'.format(self.hb))
         if self.hb == 0:
             self.reportCmd("DON",2)
             self.hb = 1
@@ -221,9 +217,26 @@ class HarmonyController(Controller):
             self.reportCmd("DOF",2)
             self.hb = 0
 
+    def handler_params(self,params):
+        LOGGER.debug(f'enter: Loading params')
+        self.Params.load(params)
+        self.poly.Notices.clear()
+        """
+        Check all user params are available and valid
+        """
+        # Assume it's good unless it's not
+        config_st = True
+        #
+        # Clear Hubs
+        #
+        #if not 'clear_hubs' in self.Params:
+        #    self.Params['clear_hubs'] = "0"
+        self.config_st = config_st
+        LOGGER.debug(f'exit: config_st={config_st}')
+
     def _discover(self):
         # Clear the hubs now so we clear some that may have been improperly added.
-        self.clear_hubs()
+        self.clear_saved_hubs()
         # Set all hubs to not found
         for hub in self.hubs:
             hub['found'] = False
@@ -238,10 +251,10 @@ class HarmonyController(Controller):
         else:
             auto_discover = int(auto_discover)
         if (auto_discover == 0):
-            self.l_info('discover','harmony_discover: skipping since auto discover={0}...'.format(auto_discover))
+            LOGGER.info('harmony_discover: skipping since auto discover={0}...'.format(auto_discover))
             discover_result = list()
         else:
-            self.l_info('discover','harmony_discover: starting...')
+            LOGGER.info('harmony_discover: starting...')
             sys.path.insert(0,"pyharmony")
             from pyharmony import discovery as harmony_discovery
             harmony_discovery.logger = LOGGER
@@ -249,50 +262,50 @@ class HarmonyController(Controller):
                 discover_result = harmony_discovery.discover(scan_attempts=10,scan_interval=1)
             except (OSError) as err:
                 self.setDriver('GV7', 9)
-                self.l_error('discover','pyharmony discover failed. May need to restart this nodeserver: {}'.format(err), exc_info=True)
-            self.l_info('discover','harmony_discover: {0}'.format(discover_result))
+                LOGGER.error('pyharmony discover failed. May need to restart this nodeserver: {}'.format(err), exc_info=True)
+            LOGGER.info('harmony_discover: {0}'.format(discover_result))
         #
         # Add the nodes
         #
         self.setDriver('GV7', 3)
         #
         # First from customParams.
+        # TODO: Add back support of customParams
         #
-        for param in self.polyConfig['customParams']:
-            # Look for customParam starting with hub_
-            match = re.match( "hub_(.*)", param, re.I)
-            self.l_info('discover','param={} match={}'.format(param,match))
-            if match is not None:
-                # The hub address is everything following the hub_
-                address = match.group(1)
-                self.l_info('discover','process param={0} address={1}'.format(param,address))
-                # Get the customParam value which is json code
-                #  { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
-                cfg = self.polyConfig['customParams'][param]
-                cfgd = None
-                try:
-                    cfgd = json.loads(cfg)
-                except:
-                    err = sys.exc_info()[0]
-                    self.l_error('discover','failed to parse cfg={0} Error: {1}'.format(cfg,err))
-                if cfgd is not None:
-                    # Check that name and host are defined.
-                    addit = True
-                    if not 'name' in cfgd:
-                        self.l_error('discover','No name in customParam {0} value={1}'.format(param,cfg))
-                        addit = False
-                    if not 'host' in cfgd:
-                        self.l_error('discover','No host in customParam {0} value={1}'.format(param,cfg))
-                        addit = False
-                    if addit:
-                        hub_name = get_valid_node_name(cfgd['name'])
-                        hub_hash = {'address': address, 'name': hub_name, 'host': cfgd['host'], 'port': 5222, 'found': True, 'custom': True}
-                        index = next((idx for (idx, hub) in enumerate(self.hubs) if hub['name'] == hub_name), None)
-                        if index is None:
-                            self.hubs.append(hub_hash)
-                        else:
-                            self.hubs[index] = hub_hash
-
+        #for param in self.polyConfig['customParams']:
+        #    # Look for customParam starting with hub_
+        #    match = re.match( "hub_(.*)", param, re.I)
+        #    LOGGER.info('param={} match={}'.format(param,match))
+        #    if match is not None:
+        #        # The hub address is everything following the hub_
+        #        address = match.group(1)
+        #        LOGGER.info('process param={0} address={1}'.format(param,address))
+        #        # Get the customParam value which is json code
+        #        #  { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
+        #        cfg = self.polyConfig['customParams'][param]
+        #        cfgd = None
+        #        try:
+        #            cfgd = json.loads(cfg)
+        #        except:
+        #            err = sys.exc_info()[0]
+        #            LOGGER.error('failed to parse cfg={0} Error: {1}'.format(cfg,err))
+        #        if cfgd is not None:
+        #            # Check that name and host are defined.
+        #            addit = True
+        #            if not 'name' in cfgd:
+        #                LOGGER.error('No name in customParam {0} value={1}'.format(param,cfg))
+        #                addit = False
+        #            if not 'host' in cfgd:
+        #                LOGGER.error('No host in customParam {0} value={1}'.format(param,cfg))
+        #                addit = False
+        #            if addit:
+        #                hub_name = get_valid_node_name(cfgd['name'])
+        #                hub_hash = {'address': address, 'name': hub_name, 'host': cfgd['host'], 'port': 5222, 'found': True, 'custom': True}
+        #                index = next((idx for (idx, hub) in enumerate(self.hubs) if hub['name'] == hub_name), None)
+        #                if index is None:
+        #                    self.hubs.append(hub_hash)
+        #                else:
+        #                    self.hubs[index] = hub_hash
         #
         # Next the discovered ones
         #
@@ -305,14 +318,14 @@ class HarmonyController(Controller):
                 addit = True
                 if 'current_fw_version' in config:
                     if config['current_fw_version'] == '4.15.206':
-                        self.l_error('discover','current_fw_version={} which is not supported.  See: {}'.
+                        LOGGER.error('current_fw_version={} which is not supported.  See: {}'.
                         format(
                             config['current_fw_version'],
                             'https://community.logitech.com/s/question/0D55A00008D4bZ4SAJ/harmony-hub-firmware-update-fixes-vulnerabilities'
                         ))
                         addit = False
                 else:
-                    self.l_error('discover','current_fw_version not in config?  Will try to use anyway {}'.format(config))
+                    LOGGER.error('current_fw_version not in config?  Will try to use anyway {}'.format(config))
                 if addit:
                     # See if the hub is already in the list.
                     hub_address = 'h'+id_to_address(config['uuid'],13)
@@ -361,8 +374,8 @@ class HarmonyController(Controller):
 
 
     def add_hub(self,address,name,host,port,discover=False):
-        self.l_debug("add_hub","address={0} name='{1}' host={2} port={3}".format(address,name,host,port))
-        self.addNode(HarmonyHub(self, address, name, host, port, watch=self.watch_mode, discover=discover))
+        LOGGER.debug("address={0} name='{1}' host={2} port={3}".format(address,name,host,port))
+        self.add_node(Hub(self, address, name, host, port, watch=self.watch_mode, discover=discover))
 
     def add_hubs(self):
         self._set_num_hubs(0)
@@ -379,72 +392,37 @@ class HarmonyController(Controller):
     def load_hubs(self):
         # Hack... if customParams has clear_hubs=1 then just clear them :(
         # This is the only way to clear a bad IP address until my changes to pyharmony are accepted.
-        cdata = self.polyConfig['customParams']
         param_name = 'clear_hubs'
-        if param_name in self.polyConfig['customParams'] and int(self.polyConfig['customParams'][param_name]) == 1:
-            self.l_info("load_hubs","Clearing known hubs, you will need to run discover again since customParam {0} = {1}".format(param_name,self.polyConfig['customParams'][param_name]))
-            self.clear_hubs()
+        if self.Params[param_name] == "1":
+            LOGGER.info("Clearing known hubs, you will need to run discover again since customParam {0} = {1}".format(param_name,self.Params[param_name]))
+            self.clear_saved_hubs()
             self.hubs = list()
+            self.Params['clear_hubs'] = "0"
         else:
-            # If hubs exists in the customData, convert to .hubs list and save the json
-            if 'hubs' in self.polyConfig['customData']:
-                # Turn customData hubs hash into a list...
-                self.l_info("load_hubs","Converting hubs from Polyglot DB to local file for {0}".format(self.polyConfig['customData']))
-                # From: self.polyConfig['customData']['hubs'][address] = {'name': name, 'host': host, 'port': port}
-                for address in self.polyConfig['customData']['hubs']:
-                    hub_c = deepcopy(self.polyConfig['customData']['hubs'][address])
-                    hub_c['address'] = address
-                    self.hubs.append(hub_c)
-                # Save the new json
-                if self.save_hubs():
-                    del self.polyConfig['customData']['hubs']
-                    self.saveCustomData(self.polyConfig['customData'])
-                    if 'hubs' in self.polyConfig['customData']:
-                        # WTF, it wasn't deleted?
-                        self.l_error("load_hubs","customData['hubs'] was not deleted? {0}".format(self.polyConfig))
-                    else:
-                        self.l_info("load_hubs","customData['hubs'] was deleted".format(self.polyConfig))
-                    # Need to generate new profile
-                    self.l_info("load_hubs","Building profile since data was migrated to external file.")
-                    self.build_profile()
-            else:
-                self.hubs = load_hubs_file(LOGGER)
-                if not self.hubs:
-                    self.hubs = list()
-                # Temp test to put them back...
-                #hdata = dict()
-                #for hub in self.hubs:
-                #    hdata[hub['address']] = hub
-                #self.polyConfig['customData']['hubs'] = hdata
-                #self.saveCustomData(self.polyConfig['customData'])
-                #self.l_info("load_hubs","Force adding back customData['hubs'] {0}".format(self.polyConfig))
-
-
-        # Always clear it so the default value shows for the user.
-        self.addCustomParam({param_name: 0})
+            self.hubs = load_hubs_file(LOGGER)
+            if not self.hubs:
+                self.hubs = list()
 
     def save_hubs(self):
         return save_hubs_file(LOGGER,self.hubs)
 
-    def clear_hubs(self):
+    def clear_saved_hubs(self):
         # Clear how many hubs we manage
         self._set_num_hubs(0)
 
     def load_config(self):
         self.harmony_config = load_config_file(LOGGER)
 
+    def handler_stop(self):
+        # TODO: exit threads?
+        LOGGER.warning("Stopping...")
+
     def delete(self):
-        """
-        Example
-        This is sent by Polyglot upon deletion of the NodeServer. If the process is
-        co-resident and controlled by Polyglot, it will be terminiated within 5 seconds
-        of receiving this message.
-        """
-        self.l_info('delete','Oh God I\'m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.')
+        LOGGER.info('Oh God I\'m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.')
 
     def _set_num_hubs(self, value):
         self.num_hubs = value
-        self.l_info("_set_num_hubs","{}".format(self.num_hubs))
+        LOGGER.info("{}".format(self.num_hubs))
         self.setDriver('GV3', self.num_hubs)
         return True
 
@@ -468,8 +446,8 @@ class HarmonyController(Controller):
         msg_pfx = "Deleting" if do_delete else "Want to delete"
         delete_cnt = 0
         # Check if we still have them.
-        for node in nodes:
-            address = node['address']
+        for address in self.poly.getNodes():
+            node = self.poly.getNode(address)
             if address != self.address:
                 #LOGGER.info("%s Checking Node: %s",self.lpfx,node)
                 LOGGER.info("%s Checking Node: %s",self.lpfx,address)
@@ -478,12 +456,12 @@ class HarmonyController(Controller):
                 if match:
                     id   = match.group(1)
                     #LOGGER.debug("Got: %s %s", type,match)
-                    LOGGER.debug('%s   Check if Hub %s "%s" id=%s still exists',self.lpfx,address,node['name'],id)
+                    LOGGER.debug('%s   Check if Hub %s "%s" id=%s still exists',self.lpfx,address,node.name,id)
                     ret = next((d for d in self.hubs if d['address'] == address), None)
                     LOGGER.debug('%s    Got: %s',self.lpfx,ret)
                     if ret is None:
                         delete_cnt += 1
-                        msg = '%s Hub that is no longer found %s "%s"' % (msg_pfx,address,node['name'])
+                        msg = '%s Hub that is no longer found %s "%s"' % (msg_pfx,address,node.name)
                         LOGGER.warning('%s %s',self.lpfx,msg)
                         self.addNotice(msg)
                         if do_delete:
@@ -494,9 +472,9 @@ class HarmonyController(Controller):
                     if match:
                         type = match.group(1)
                         id   = int(match.group(2))
-                        LOGGER.debug(" np: %s", node['primary'])
-                        if node['primary'] in self.nodes:
-                            pname = self.nodes[node['primary']].name
+                        LOGGER.debug(" np: %s", node.primary)
+                        if node['primary'] in self.poly.getNodes():
+                            pname = self.poly.getNode(node.primary).name
                         else:
                             pname = node['primary']
                         #LOGGER.debug("Got: %s %s", type,match)
@@ -528,20 +506,8 @@ class HarmonyController(Controller):
         if delete_cnt > 0 and not do_delete:
             self.addNotice("Please run 'Purge Execute' on %s in Admin Console" % self.name)
 
-        LOGGER.info("%s done",self.lpfx)
+        LOGGER.info("%s done".format(self.lpfx))
         self.purge_run = True
-
-    def l_info(self, name, string):
-        LOGGER.info("%s:%s: %s" %  (self.id,name,string))
-
-    def l_error(self, name, string, exc_info=False):
-        LOGGER.error("%s:%s: %s" % (self.id,name,string), exc_info=exc_info)
-
-    def l_warning(self, name, string):
-        LOGGER.warning("%s:%s: %s" % (self.id,name,string))
-
-    def l_debug(self, name, string):
-        LOGGER.debug("%s:%s: %s" % (self.id,name,string))
 
     # Just calls build_profile with poll_hubs=False
     def update_profile(self):
@@ -568,7 +534,7 @@ class HarmonyController(Controller):
             config_data = write_profile(LOGGER,self.hubs)
             wrote_profile = True
         except (Exception) as err:
-            self.l_error('build_profile','write_profile failed: {}'.format(err), exc_info=True)
+            LOGGER.error('write_profile failed: {}'.format(err), exc_info=True)
             self.setDriver('GV7', 7)
         # Reload the config we just generated.
         self.load_config()
@@ -584,13 +550,13 @@ class HarmonyController(Controller):
         return st
 
     def restart_hubs(self):
-        self.l_debug('restart_hubs','restarting hubs')
+        LOGGER.debug('restart_hubs','restarting hubs')
         for hub in self.hubs:
             address = hub['address']
-            if address in self.nodes:
-                self.nodes[address].restart()
+            if address in self.getNodes():
+                self.getNodes(address).restart()
             else:
-                self.l_debug('restart_hubs','hub {} does not seem to exist yet'.format(address))
+                LOGGER.debug('hub {} does not seem to exist yet'.format(address))
 
     def _update_profile(self):
         """
@@ -601,7 +567,7 @@ class HarmonyController(Controller):
         try:
             config_data = write_profile(LOGGER,self.hubs,False)
         except (Exception) as err:
-            self.l_error('build_profile','write_profile failed: {}'.format(err), exc_info=True)
+            LOGGER.error('write_profile failed: {}'.format(err), exc_info=True)
             self.setDriver('GV7', 7)
         # Reload the config we just generated, it shouldn't update, but it might.
         self.load_config()
@@ -612,11 +578,11 @@ class HarmonyController(Controller):
     def install_profile(self):
         self.setDriver('GV7', 5)
         try:
-            self.poly.installprofile()
+            self.poly.updateProfile()
         except:
             err = sys.exc_info()[0]
             self.setDriver('GV7', 8)
-            self.l_error('discovery','Install Profile Error: {}'.format(err))
+            LOGGER.error('Install Profile Error: {}'.format(err))
             return False
         # Now a reboot is required
         # TODO: This doesn't really mean it was complete, a response is needed from polyglot,
@@ -624,94 +590,77 @@ class HarmonyController(Controller):
         self.setDriver('GV7', 6)
         return True
 
-    def set_all_logs(self,level):
-        LOGGER.setLevel(level)
+    def handler_log_level(self,level):
+        LOGGER.info(f'enter: level={level}')
+        if level['level'] < 10:
+            LOGGER.info("Setting basic config to DEBUG...")
+            #LOG_HANDLER.set_basic_config(True,logging.DEBUG)
+            slevel = logging.DEBUG
+        else:
+            LOGGER.info("Setting basic config to WARNING...")
+            #LOG_HANDLER.set_basic_config(True,logging.WARNING)
+            slevel = logging.WARNING
         logging.getLogger('sleekxmpp').setLevel(logging.ERROR)
-        logging.getLogger('requests').setLevel(level)
-        logging.getLogger('urllib3').setLevel(level)
-        logging.getLogger('pyharmony').setLevel(level)
-
-    def set_debug_level(self,level):
-        # First run will be None, so default is all
-        if level is None:
-            level = 0
-        else:
-            level = int(level)
-        self.setDriver('GV4', level)
-        # 0=All 10=Debug are the same because 0 (NOTSET) doesn't show everything.
-        if level == 0 or level == 10:
-            self.set_all_logs(logging.DEBUG)
-        elif level == 20:
-            self.set_all_logs(logging.INFO)
-        elif level == 30:
-            self.set_all_logs(logging.WARNING)
-        elif level == 40:
-            self.set_all_logs(logging.ERROR)
-        elif level == 50:
-            self.set_all_logs(logging.CRITICAL)
-        else:
-            self.l_error("set_debug_level","Unknown level {0}".format(level))
+        logging.getLogger('requests').setLevel(slevel)
+        logging.getLogger('urllib3').setLevel(slevel)
+        logging.getLogger('pyharmony').setLevel(slevel)
+        LOGGER.info(f'exit: slevel={slevel}')
 
     def set_watch_mode(self,val):
         if val is None:
-            self.l_debug("set_watch_mode","{0}".format(val))
+            LOGGER.debug("{0}".format(val))
             val = 1
         self.watch_mode = True if int(val) == 1 else False
-        self.l_debug("set_watch_mode","{0}={1}".format(val,self.watch_mode))
+        LOGGER.debug("{0}={1}".format(val,self.watch_mode))
         for hub in self.hubs:
             address = hub['address']
-            if address in self.nodes:
-                self.nodes[address].set_watch(self.watch_mode)
+            if address in self.poly.getNodes():
+                self.poly.getNode(address).set_watch(self.watch_mode)
         self.setDriver('GV10',val)
 
     def _cmd_discover(self, command):
         self.discover()
 
     def _cmd_purge_check(self,command):
-        self.l_info("_cmd_purge","building...")
+        LOGGER.info("building...")
         self.purge(do_delete=False)
 
     def _cmd_purge_execute(self,command):
-        self.l_info("_cmd_purge","building...")
+        LOGGER.info("building...")
         self.purge(do_delete=True)
 
     def _cmd_build_profile(self,command):
-        self.l_info("_cmd_build_profile","building...")
+        LOGGER.info("building...")
         self.build_profile()
 
     def _cmd_install_profile(self,command):
-        self.l_info("_cmd_install_profile","installing...")
-        self.poly.installprofile()
+        LOGGER.info("installing...")
+        self.poly.updateProfile()
 
     def _cmd_update_profile(self,command):
-        self.l_info("_cmd_update_profile","...")
+        LOGGER.info("...")
         self.update_profile()
-
-    def _cmd_set_debug_mode(self,command):
-        val = int(command.get('value'))
-        self.l_info("_cmd_set_debug_mode",val)
-        self.set_debug_level(val)
 
     def _cmd_set_discover_mode(self,command):
         val = int(command.get('value'))
-        self.l_info("_cmd_set_discover_mode",val)
+        LOGGER.info(val)
         self.setDriver('GV8', val)
 
     def _cmd_set_activity_method(self,command):
         val = int(command.get('value'))
-        self.l_info("_cmd_set_activity_method",val)
+        LOGGER.info(val)
         self.setDriver('GV9', val)
         self.activity_method = val # The default
 
     def _cmd_set_shortpoll(self,command):
         val = int(command.get('value'))
-        self.l_info("_cmd_set_short_poll",val)
+        LOGGER.info(val)
         self.setDriver('GV5', val)
         self.polyConfig['shortPoll'] = val
 
     def _cmd_set_longpoll(self,command):
         val = int(command.get('value'))
-        self.l_info("_cmd_set_log_poll",val)
+        LOGGER.info(val)
         self.setDriver('GV6', val)
         self.polyConfig['longPoll'] = val
 
@@ -731,7 +680,7 @@ class HarmonyController(Controller):
         'PURGE_EXECUTE': _cmd_purge_execute,
         'INSTALL_PROFILE': _cmd_install_profile,
         'UPDATE_PROFILE': _cmd_update_profile,
-        'SET_DEBUGMODE': _cmd_set_debug_mode,
+        #'SET_DEBUGMODE': _cmd_set_debug_mode,
         'SET_SHORTPOLL': _cmd_set_shortpoll,
         'SET_LONGPOLL':  _cmd_set_longpoll,
         'SET_DI_MODE': _cmd_set_discover_mode,
@@ -742,16 +691,16 @@ class HarmonyController(Controller):
        Driver Details:
     """
     drivers = [
-        {'driver': 'ST',  'value': 1,  'uom': 2},  #    bool:   Connection status (managed by polyglot)
+        {'driver': 'ST',  'value': 1,  'uom': 25},  #    bool:   Connection status (managed by polyglot)
         # No longer used.
         #{'driver': 'GV1', 'value': 0,  'uom': 56}, #   float:   Version of this code (Major)
         #{'driver': 'GV2', 'value': 0,  'uom': 56}, #   float:   Version of this code (Minor)
         {'driver': 'GV3', 'value': 0,  'uom': 25}, # integer: Number of the number of hubs we manage
-        {'driver': 'GV4', 'value': 0,  'uom': 25}, # integer: Log/Debug Mode
+        #Not used in PG3 {'driver': 'GV4', 'value': 0,  'uom': 25}, # integer: Log/Debug Mode
         {'driver': 'GV5', 'value': 5,  'uom': 25}, # integer: shortpoll
         {'driver': 'GV6', 'value': 60, 'uom': 25}, # integer: longpoll
         {'driver': 'GV7', 'value': 0,  'uom': 25}, #    bool: Profile status
         {'driver': 'GV8', 'value': 1,  'uom': 25}, #    bool: Auto Discover
         {'driver': 'GV9', 'value': 2,  'uom': 25}, #    bool: Activity Method
-        {'driver': 'GV10', 'value': 2,  'uom': 2}   #    bool: Activity Method
+        {'driver': 'GV10', 'value': 1,  'uom': 2}  #    bool: Hub Watch Mode
     ]

@@ -3,7 +3,7 @@
   <nodeDef id="HarmonyController" nodeType="139" nls="HHCNTL">
     <sts>
       <!-- Device Status -->
-      <st id="ST" editor="BOOL" />
+      <st id="ST" editor="cst" />
       <!-- Version Major -->
       <!-- <st id="GV1" editor="FLOAT" /> -->
       <!-- Version Minor -->
@@ -11,7 +11,7 @@
       <!-- Number of Hubs -->
       <st id="GV3" editor="INTEGER" />
       <!-- Debug Mode -->
-      <st id="GV4" editor="DEBUGMODE" />
+      <!-- <st id="GV4" editor="DEBUGMODE" /> -->
       <!-- shortpoll -->
       <st id="GV5" editor="INTEGER" />
       <!-- longpoll -->
