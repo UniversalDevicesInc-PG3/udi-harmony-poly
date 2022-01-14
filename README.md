@@ -3,11 +3,46 @@
 
 # UDI Polyglot V3 Harmony Hub Nodeserver
 
-This is the Harmony Hub Poly for the [Universal Devices ISY994i](https://www.universal-devices.com/residential/ISY) [Polyglot interface](http://www.universal-devices.com/developers/polyglot/docs/) with  [Polyglot V2](https://github.com/Einstein42/udi-polyglotv2)
+This is the Harmony Hub Poly for the [Universal Devices Polisy](https://www.universal-devices.com) with Polyglot Version 3 (PG3)
 (c) JimBoCA aka Jim Searle
 MIT license.
 
 This node server is intended to support the [Logitech Harmony Hub](http://www.logitech.com/en-us/product/harmony-hub) using the [pyharmony Python Library](https://pypi.python.org/pypi/pyharmony).
+
+## Help
+
+If you have any issues are questions you can ask on [PG3 Harmony Hub SubForum](https://forum.universal-devices.com/forum/311-harmonyhub/) or report an issue at [PG3 HarmonyHub Github issues](https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly/issues).
+
+## Moving from PG2
+
+There are a few ways to move
+
+### Backup and Restore
+
+The best way to move from PG2 to PG3 is to backup on PG2 and restore on PG3, but the only option is to do all your nodeservers at once.  I don't have much information on this method, if you have questions please ask on the PG3 forum.
+
+### Delete and add
+
+If you can't or don't want backup/restore then you can delete the NS on PG2 and install on the same slot on PG2.  This may cause all the node addresses to change because of the way Harmony stores the id that we reference, so you will have to review all your programs to make sure they still work.  If the nodes are in a scene you will have to add them back.  But if the node address do not change, all your programs should work after doing an update and save on each one, or rebooting the ISY, especially any using the Controller node since it's ST value has changed.  If the node addresses changed you will see the program as information about the unknown node to help you put it back the way it was.
+
+#### Manually copy data
+
+IF doing the delete and add, and you are a little UNIX savy, something like this should copy from PG2 to PG3 on the same Polisy, where UUID is your Polisy UUID and S# is the slot number.
+- Install the nodeserver
+- Once it completes the startup, stop it
+- Log into the Polisy with your favorite terminal program
+- cd /var/polyglot/pg3/ns/UUID_S#
+- sudo -u polyglot rm -rf config
+- sudo -u polyglot cp -r /var/polyglot/nodeservers/HarmonyHub/config .
+  - If PG2 is on another machine you can use scp instaed
+- Restart the NS
+- Open Admin Console and enable 
+
+I have not tried this but it should work.  If you have issues please ask on the sub-forum.  Now that I think about it, I could have the nodeserver automatically do this if they are on the same machine.
+
+### Add then delete
+
+Another option is to install in a new slot then go edit all your programs and scenes that reference the nodes and switch to the new slots. 
 
 ## Installation
 
@@ -16,8 +51,6 @@ IMPORTANT: The latest harmony hub firmware broke access, you must manually enabl
   - Select Menu -> Harmony Setup -> Add/Edit Devices & Activities
   - Select Remote & Hub -> Enable XMPP
   - Do this for every hub.
-
-WARNING: If you are running the v1 polyglot harmony nodeserver it will not longer work after this one is installed.  But, initially I would advise everyone to install this in a new slot and leave the old one running.  If you go back to the old one you will need manually re-install the older version of pyharmony if you have polyglot v1 and v2 running on the same machine.
 
 1. Make sure your Harmony Hubs have a static IP assigned.  The nodeserver can not re-find the hub if it changes IP addresses.  This may be fixed in the future.
 2. Backup Your ISY in case of problems!
@@ -156,11 +189,7 @@ If you have an issue where the nodes are not showing up properly, open the Polyg
 
 # Upgrading
 
-Open the Polyglot web page, go to nodeserver store and click "Update" for "HarmonyHub".
-
-For Polyglot 2.0.35, hit "Cancel" in the update window so the profile will not be updated and ISY rebooted.  The install procedure will properly handle this for you.  This will change with 2.0.36, for that version you will always say "No" and let the install procedure handle it for you as well.
-
-Then restart the HarmonyHub nodeserver by selecting it in the Polyglot dashboard and select Control -> Restart, then watch the log to make sure everything goes well.
+Open the Polyglot web page, go to nodeserver page and restart.
 
 The HarmonyHub keeps track of the version number and when a profile rebuild is necessary.  The profile/version.txt will contain the HarmonyHub profile_version which is updated in server.json when the profile should be rebuilt.  You can see the HarmonyHub version number used to rebuild the profile by checking the HarmonyHub Controller node title in the Admin Console which will contain the code version number, this can be newer than the profile_version number.
 
@@ -168,8 +197,10 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 Please create a **backup** of your **ISY AND Polyglot** before doing any upgrades in case there are issues.
 
-- 3.0.0: 01/03/2021
-  - First PG3 release
+- 3.0.2: 01/13/2022
+  - Fix add notice calls in Purge
+- 3.0.1: 01/03/2022
+  - First real PG3 release
 - 2.4.4 12/07/2020
   - Fix crash when using Manual Hub Entries in Configuration
 - 2.4.3 04/17/2020

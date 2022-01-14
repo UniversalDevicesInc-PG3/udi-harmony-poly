@@ -463,7 +463,7 @@ class Controller(Node):
                         delete_cnt += 1
                         msg = '%s Hub that is no longer found %s "%s"' % (msg_pfx,address,node.name)
                         LOGGER.warning('%s %s',self.lpfx,msg)
-                        self.addNotice(msg)
+                        self.Notices[address] = msg
                         if do_delete:
                             self.controller.poly.delNode(address)
                 else:
@@ -486,7 +486,7 @@ class Controller(Node):
                                 delete_cnt += 1
                                 msg = '%s Activity for "%s" that is no longer used %s "%s"' % (msg_pfx,pname,address,node['name'])
                                 LOGGER.warning('%s %s',self.lpfx,msg)
-                                self.addNotice(msg)
+                                self.Notices[address] = msg
                                 if do_delete:
                                     self.controller.poly.delNode(address)
                         elif type == 'd':
@@ -497,14 +497,14 @@ class Controller(Node):
                                 delete_cnt += 1
                                 msg = '%s Device for "%s" that is no longer used %s "%s"' % (msg_pfx,pname,address,node['name'])
                                 LOGGER.warning('%s %s',self.lpfx,msg)
-                                self.addNotice(msg)
+                                self.Notices[address] = msg
                                 if do_delete:
                                     self.controller.poly.delNode(address)
                         else:
                             LOGGER.warning('%s Unknown type "%s" "%s" id=%s still exists',self.lpfx,type,address,node['name'])
 
         if delete_cnt > 0 and not do_delete:
-            self.addNotice("Please run 'Purge Execute' on %s in Admin Console" % self.name)
+            self.Notices['purge'] = "Please run 'Purge Execute' on %s in Admin Console" % self.name
 
         LOGGER.info("%s done".format(self.lpfx))
         self.purge_run = True
