@@ -197,7 +197,7 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 Please create a **backup** of your **ISY AND Polyglot** before doing any upgrades in case there are issues.
 
-- 3.0.2: 01/16/2022
+- 3.0.3: 01/17/2022
   - Removed config from zip file
 - 3.0.2: 01/13/2022
   - Fix add notice calls in Purge
