@@ -15,6 +15,8 @@ If you have any issues are questions you can ask on [PG3 Harmony Hub SubForum](h
 
 ## Moving from PG2
 
+Make sure your PG3 version is at least 3.0.38
+
 There are a few ways to move
 
 ### Backup and Restore
