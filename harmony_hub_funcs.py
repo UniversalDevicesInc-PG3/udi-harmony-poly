@@ -206,6 +206,8 @@ def get_server_data(logger):
     return serverdata
 
 def harmony_hub_client(logger,host=None,port=5222):
+
+    logger.info(f"Connecting to: {host}")
     import signal
 
     class TimeoutError(Exception):
@@ -225,4 +227,5 @@ def harmony_hub_client(logger,host=None,port=5222):
     finally:
         signal.alarm(0)
 
+    logger.info(f"Returning: {result}")
     return result
