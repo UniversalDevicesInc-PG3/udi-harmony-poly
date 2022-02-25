@@ -428,7 +428,7 @@ class Controller(Node):
 
     def purge(self,do_delete=False):
         LOGGER.info("%s starting do_delete=%s",self.lpfx,do_delete)
-        self.removeNoticesAll()
+        self.Notices.clear()
         #LOGGER.debug("%s config=",self.lpfx,config)
         #
         # Check for removed activities or devices
@@ -436,7 +436,7 @@ class Controller(Node):
         # This can change while we are checking if another hub is being added...
         #LOGGER.debug("%s",self.controller.poly.config)
         # These are all the nodes from the config, not the real nodes we added...
-        nodes = self.controller.poly.config['nodes'].copy()
+        #nodes = self.controller.poly.config['nodes'].copy()
         # Pattern match hub address s
         pch = re.compile('h([a-f0-9]+)$')
         # Pattern match activity and device addresses
@@ -473,40 +473,43 @@ class Controller(Node):
                         type = match.group(1)
                         id   = int(match.group(2))
                         LOGGER.debug(" np: %s", node.primary)
-                        if node['primary'] in self.poly.getNodes():
+                        if node.primary in self.poly.getNodes():
                             pname = self.poly.getNode(node.primary).name
                         else:
-                            pname = node['primary']
+                            pname = node.primary
                         #LOGGER.debug("Got: %s %s", type,match)
                         if type == 'a':
-                            LOGGER.debug('%s   Check if Activity %s "%s" id=%s still exists',self.lpfx,address,node['name'],id)
+                            LOGGER.debug('%s   Check if Activity %s "%s" id=%s still exists',self.lpfx,address,node.name,id)
                             item = next((d for d in activities if int(d['id']) == id), None)
                             LOGGER.debug('%s    Got: %s',self.lpfx,item)
                             if item is None or item['cnt'] == 0:
                                 delete_cnt += 1
-                                msg = '%s Activity for "%s" that is no longer used %s "%s"' % (msg_pfx,pname,address,node['name'])
+                                msg = '%s Activity for "%s" that is no longer used %s "%s"' % (msg_pfx,pname,address,node.name)
                                 LOGGER.warning('%s %s',self.lpfx,msg)
                                 self.Notices[address] = msg
                                 if do_delete:
                                     self.controller.poly.delNode(address)
                         elif type == 'd':
-                            LOGGER.debug('%s   Check if Device %s "%s" id=%s still exists',self.lpfx,address,node['name'],id)
+                            LOGGER.debug('%s   Check if Device %s "%s" id=%s still exists',self.lpfx,address,node.name,id)
                             item = next((d for d in devices if int(d['id']) == id), None)
                             LOGGER.debug('%s    Got: %s',self.lpfx,item)
                             if item is None or item['cnt'] == 0:
                                 delete_cnt += 1
-                                msg = '%s Device for "%s" that is no longer used %s "%s"' % (msg_pfx,pname,address,node['name'])
+                                msg = '%s Device for "%s" that is no longer used %s "%s"' % (msg_pfx,pname,address,node.name)
                                 LOGGER.warning('%s %s',self.lpfx,msg)
                                 self.Notices[address] = msg
                                 if do_delete:
                                     self.controller.poly.delNode(address)
                         else:
-                            LOGGER.warning('%s Unknown type "%s" "%s" id=%s still exists',self.lpfx,type,address,node['name'])
+                            LOGGER.warning('%s Unknown type "%s" "%s" id=%s still exists',self.lpfx,type,address,node.name)
 
-        if delete_cnt > 0 and not do_delete:
-            self.Notices['purge'] = "Please run 'Purge Execute' on %s in Admin Console" % self.name
+        if not do_delete:
+            if delete_cnt > 0:
+                self.Notices['purge'] = "Please run 'Purge Execute' on %s in Admin Console" % self.name
+            else:
+                self.Notices['purge'] = "Nothing to purge"
 
-        LOGGER.info("%s done".format(self.lpfx))
+        LOGGER.info(f"{self.lpfx} done")
         self.purge_run = True
 
     # Just calls build_profile with poll_hubs=False
