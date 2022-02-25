@@ -242,6 +242,9 @@ def write_profile(logger,hub_list,poll_hubs=True):
                     activities.append({'label':aname,'id':int(a['id']),'cnt':1,'hub':[address]});
                 else:
                     logger.debug('  Using existing activity %s index=%d',activities[index],index)
+                    if activities[index]['label'] != a['label']:
+                      logger.debug(f"    Updating name to {a['label']}")
+                      activities[index]['label'] = a['label']
                     activities[index]['cnt'] += 1
                     activities[index]['hub'].append(address)
                 nls.write(NLS_TMPL % (address.upper(), index, aname))
@@ -281,6 +284,9 @@ def write_profile(logger,hub_list,poll_hubs=True):
                             functions.append({'label':str(f['label']),'name':fname,'command':{str(d['id']):str(ay['command'])},'cnt': 1});
                         else:
                             logger.debug('  Using existing function %s index=%d',functions[index],index)
+                            if functions[index]['label'] != f['label']:
+                              logger.debug(f"    Updating name to {f['label']}")
+                              functions[index]['label'] = f['label']
                             functions[index]['cnt'] += 1
                         # dict that makes it easy to find the actual command for this
                         functions[index]['command'][str(d['id'])] = ay['command']
