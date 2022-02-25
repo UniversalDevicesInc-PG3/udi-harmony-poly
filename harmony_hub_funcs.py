@@ -80,10 +80,6 @@ def toggleBit(int_type, offset):
     mask = 1 << offset
     return(int_type ^ mask)
 
-def harmony_hub_client(host, port=5222):
-    client = ha_get_client(host, port)
-    return client
-
 def uuid_to_address(uuid):
     return uuid[-12:]
 
@@ -208,3 +204,25 @@ def get_server_data(logger):
     serverdata['version_major'] = v1
     serverdata['version_minor'] = v2
     return serverdata
+
+def harmony_hub_client(logger,host=None,port=5222):
+    import signal
+
+    class TimeoutError(Exception):
+        pass
+
+    def handler(signum, frame):
+        raise TimeoutError()
+
+    # set the timeout handler
+    signal.signal(signal.SIGALRM, handler) 
+    signal.alarm(10)
+    try:
+        result = client = ha_get_client(host, port)
+    except TimeoutError as exc:
+        logger.error(f"Timout connecting to {host}")
+        result = False
+    finally:
+        signal.alarm(0)
+
+    return result

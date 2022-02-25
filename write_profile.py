@@ -3,10 +3,8 @@
 import yaml,collections,re,os,zipfile
 from harmony_hub_funcs import harmony_hub_client,load_hubs_file,get_file,CONFIG_FILE,load_config_file,write_config_file,get_file,get_server_data
 
-pfx = "write_profile:"
 
 VERSION_FILE = "profile/version.txt"
-
 
 # TODO: Check that server node & name are defined.
 #if 'server' in config and config['host'] is not None:
@@ -160,14 +158,14 @@ def write_profile(logger,hub_list,poll_hubs=True):
     # Start the nls with the template data.
     #
     en_us_txt = "profile/nls/en_us.txt"
-    logger.info("{0} Writing {1}".format(pfx,en_us_txt))
+    logger.info(f"Writing {en_us_txt}")
     nls_tmpl = open("profile/nls/en_us.tmpl", "r")
     nls      = open(en_us_txt,  "w")
     for line in nls_tmpl:
         nls.write(re.sub(r'^(ND-HarmonyController-NAME = Harmony Hub Controller).*',r'\1 {0}'.format(sd['version']),line))
     nls_tmpl.close()
 
-    logger.info("{0} Writing profile/nodedef/custom.xml and profile/editor/custom.xml".format(pfx))
+    logger.info("Writing profile/nodedef/custom.xml and profile/editor/custom.xml")
     nodedef = open("profile/nodedef/custom.xml", "w")
     editor  = open("profile/editor/custom.xml", "w")
     nodedef.write("<nodeDefs>\n")
@@ -178,7 +176,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
     #
     first_hub = True
     if len(hub_list) == 0:
-        logger.error("{0} Hub list is empty?".format(pfx))
+        logger.error("Hub list is empty?")
     for ahub in hub_list:
         #
         # Process this hub.
@@ -199,20 +197,20 @@ def write_profile(logger,hub_list,poll_hubs=True):
         # Building a new config
         #
         if not poll_hubs:
-            logger.debug('{} Loading hub config: {}'.format(pfx,harmony_config_file))
+            logger.debug('Loading hub config: {}'.format(harmony_config_file))
             try:
                 with open(harmony_config_file, 'r') as infile:
                     harmony_config = yaml.load(infile,Loader=yaml.FullLoader)
             except:
-                logger.error('{} Error Loading hub config: {}'.format(pfx,harmony_config_file),exc_info=True)
+                logger.error('Error Loading hub config: {}'.format(harmony_config_file),exc_info=True)
                 poll_hubs = True
         if poll_hubs:
             # Connect to the hub and get the configuration
-            logger.info("{0} Initializing Client for {1} {2} {3}".format(pfx,address,name,host))
-            client = harmony_hub_client(host=host)
-            logger.info(pfx + " Client: " + str(client))
+            logger.info(f"Initializing Client for {address} {name} {host}")
+            client = harmony_hub_client(logger=logger,host=host)
+            logger.info(f" Client: {client}")
             if client is False:
-                logger.error("{0} Error connecting to client {1} {2} {3}".format(pfx,address,name,host))
+                logger.error(f"connecting to client {address} {name} {host}")
                 continue
             harmony_config = client.get_config()
             client.disconnect(send_close=True)
@@ -234,7 +232,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
             # Skip -1 since we printed it already.
             if int(a['id']) != -1:
                 # Print the Harmony Activities to the log
-                logger.debug("%s Activity: %s  Id: %s" % (pfx, a['label'], a['id']))
+                logger.debug("Activity: %s  Id: %s" % (a['label'], a['id']))
                 aname = str(a['label'])
                 id = int(a['id'])
                 index = next((index for (index, d) in enumerate(activities) if d['id'] == id), None)
@@ -261,7 +259,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
             nodedef.write(NODEDEF_TMPL_DEVICE % ('d' + d['id'], 'D' + d['id'], 'Btn' + d['id']))
             nls.write("\n# %s" % info)
             nls.write(NLS_NODE_TMPL % ('d' + d['id'], d['label'], 'd' + d['id']))
-            logger.debug("%s   Device: %s  Id: %s" % (pfx, d['label'], d['id']))
+            logger.debug("   Device: %s  Id: %s" % (d['label'], d['id']))
             logger.debug("%s",devices)
             devices.append({'label':d['label'],'id':int(d['id']),'cnt': 1,'hub':[address]});
             #
@@ -273,7 +271,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
                     try:
                         ay = yaml.load(a,Loader=yaml.FullLoader)
                     except (Exception) as err:
-                        logger.error('{0} failed to parse string: {1}'.format(pfx,err))
+                        logger.error(f'failed to parse string: {err}')
                     else:
                         fname = f['name']
                         index = next((index for (index, d) in enumerate(functions) if d['name'] == fname), None)
@@ -286,7 +284,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
                             functions[index]['cnt'] += 1
                         # dict that makes it easy to find the actual command for this
                         functions[index]['command'][str(d['id'])] = ay['command']
-                        logger.debug("%s     Function: Index: %d, Name: %s,  Label: %s, Command: %s" % (pfx, index, f['name'], f['label'], ay['command']))
+                        logger.debug(f"     Function: Index: {index}, Name: {f['name']},  Label: {f['label']}, Command: {ay['command']}")
                         #nls.write("# Button name: %s, label: %s\n" % (f['name'], f['label']))
                         # This is the list of button numbers in this device.
                         if not index in subset:
@@ -320,7 +318,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
         outfile.write(sd['profile_version'])
     outfile.close()
 
-    logger.info(pfx + " done.")
+    logger.info("done")
 
     return(config_data)
 
@@ -335,6 +333,6 @@ if __name__ == "__main__":
     # Only write the profile if the version is updated.
     hubs = load_hubs_file(logger)
     if hubs is False:
-        logger.error('{0} Unable to load hubs file which does not exist on first run or before 2.1.0, please run Build Profile in admin console after restarting this nodeserver'.format(pfx))
+        logger.error('Unable to load hubs file which does not exist on first run or before 2.1.0, please run Build Profile in admin console after restarting this nodeserver')
     else:
         write_profile(logger,hubs)

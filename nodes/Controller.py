@@ -600,7 +600,8 @@ class Controller(Node):
             LOGGER.info("Setting basic config to WARNING...")
             #LOG_HANDLER.set_basic_config(True,logging.WARNING)
             slevel = logging.WARNING
-        logging.getLogger('sleekxmpp').setLevel(logging.ERROR)
+        # 02/23/2022 Was logging.WARNING but was missing timeouts?
+        logging.getLogger('sleekxmpp').setLevel(slevel)
         logging.getLogger('requests').setLevel(slevel)
         logging.getLogger('urllib3').setLevel(slevel)
         logging.getLogger('pyharmony').setLevel(slevel)
