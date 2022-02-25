@@ -131,9 +131,10 @@ The commands for this node
 #### Discover
    * Run's the harmony auto-discover to find your hubs, builds the profiel, and installs the profile
    * This should be run whenever you add a new hub, or update activities or devices on your hub
-#### Purge
+#### Purge Check / Purge Execute
+   * Check only does Checking, and Execute actually will delete them.
    * Deletes old Hubs and their Activities and Devices from Polyglot and the ISY that are no longer in the Harmony configuration
-   * Plese backup your ISY before running this in case there is an issue.
+   * Please backup your ISY before running this in case there is an issue.
 #### Install Profile
    * This uploads the currently built profile into the ISY.
    * Typically this is not necessary, but sometimes the ISY needs the profile uploaded twice.
@@ -199,6 +200,10 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 Please create a **backup** of your **ISY AND Polyglot** before doing any upgrades in case there are issues.
 
+- 3.0.4: 02/25/2022
+  - [Renamed Activities don't show up on ISY](https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly/issues/35)
+    - Issue is fixed, but must still delete the node in PG3 UI, then "Build Profile"
+  - [Purge Commands broken](https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly/issues/33)
 - 3.0.3: 01/17/2022
   - Removed config from zip file
 - 3.0.2: 01/13/2022
