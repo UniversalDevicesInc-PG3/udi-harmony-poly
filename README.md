@@ -200,6 +200,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 Please create a **backup** of your **ISY AND Polyglot** before doing any upgrades in case there are issues.
 
+- 3.0.5: 02/25/2022:
+  - Fix crashes when building profile.
 - 3.0.4: 02/25/2022
   - Fixed: [Renamed Activities don't show up on ISY](https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly/issues/35)
     - Issue is fixed, but must still delete the node in PG3 UI, then "Build Profile"
