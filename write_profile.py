@@ -114,7 +114,7 @@ def reduce_subset(subset):
             subset_str += "-" + str(y)
     return { 'full_string': full_string, 'subset_string': subset_str }
 
-def write_profile(logger,hub_list,poll_hubs=True):
+def write_profile(logger,hub_list,poll_hubs=True,timeout=False):
     config_data = {}
     sd = get_server_data(logger)
     if sd is False:
@@ -207,7 +207,7 @@ def write_profile(logger,hub_list,poll_hubs=True):
         if poll_hubs:
             # Connect to the hub and get the configuration
             logger.info(f"Initializing Client for {address} {name} {host}")
-            client = harmony_hub_client(logger=logger,host=host)
+            client = harmony_hub_client(logger=logger,host=host,timeout=timeout)
             logger.info(f" Client: {client}")
             if client is False:
                 logger.error(f"connecting to client {address} {name} {host}")
@@ -341,4 +341,4 @@ if __name__ == "__main__":
     if hubs is False:
         logger.error('Unable to load hubs file which does not exist on first run or before 2.1.0, please run Build Profile in admin console after restarting this nodeserver')
     else:
-        write_profile(logger,hubs)
+        write_profile(logger,hubs,timeout=10)

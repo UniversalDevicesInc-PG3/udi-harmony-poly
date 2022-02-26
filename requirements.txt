@@ -3,3 +3,6 @@ pyaml
 #pyharmony     == 1.0.21
 sleekxmpp
 netifaces
+#argparse
+#aiohttp>=3.4
+#websockets>=6.0

@@ -67,11 +67,16 @@ class Controller(Node):
         self.n_queue.pop()
 
     def add_node(self,node):
+        LOGGER.debug("Node: address={node.address} name={node.name}")
         anode = self.poly.addNode(node)
         LOGGER.debug(f'got {anode}')
         self.wait_for_node_done()
         if anode is None:
             LOGGER.error('Failed to add node address')
+        #else:
+        #    enode = self.poly.getNode(node.address)
+        #    if (node.name == "Watch a DVD" or node.name == "Watch a DVDx"):
+        #        LOGGER.error(f"Name mismatch, node.name={node.name} anode={anode.name} enode={node.name}")
         return anode
 
     def handler_start(self):
@@ -556,8 +561,8 @@ class Controller(Node):
         LOGGER.debug('restart_hubs','restarting hubs')
         for hub in self.hubs:
             address = hub['address']
-            if address in self.getNodes():
-                self.getNodes(address).restart()
+            if address in self.poly.getNodes():
+                self.poly.getNode(address).restart()
             else:
                 LOGGER.debug('hub {} does not seem to exist yet'.format(address))
 

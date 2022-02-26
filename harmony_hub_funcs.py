@@ -205,27 +205,31 @@ def get_server_data(logger):
     serverdata['version_minor'] = v2
     return serverdata
 
-def harmony_hub_client(logger,host=None,port=5222):
+def harmony_hub_client(logger,host=None,port=5222,timeout=False):
 
     logger.info(f"Connecting to: {host}")
-    import signal
 
-    class TimeoutError(Exception):
-        pass
+    if timeout is False:
+        result = ha_get_client(host, port)
+    else:
+        import signal
 
-    def handler(signum, frame):
-        raise TimeoutError()
+        class TimeoutError(Exception):
+            pass
 
-    # set the timeout handler
-    signal.signal(signal.SIGALRM, handler) 
-    signal.alarm(10)
-    try:
-        result = client = ha_get_client(host, port)
-    except TimeoutError as exc:
-        logger.error(f"Timout connecting to {host}")
-        result = False
-    finally:
-        signal.alarm(0)
+        def handler(signum, frame):
+            raise TimeoutError()
+
+        # set the timeout handler
+        signal.signal(signal.SIGALRM, handler) 
+        signal.alarm(timeout)
+        try:
+            result = ha_get_client(host, port)
+        except TimeoutError as exc:
+            logger.error(f"Timout connecting to {host}")
+            result = False
+        finally:
+            signal.alarm(0)
 
     logger.info(f"Returning: {result}")
     return result
