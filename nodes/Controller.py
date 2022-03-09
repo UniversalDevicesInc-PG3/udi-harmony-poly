@@ -67,7 +67,7 @@ class Controller(Node):
         self.n_queue.pop()
 
     def add_node(self,node):
-        LOGGER.debug("Node: address={node.address} name={node.name}")
+        LOGGER.debug(f"Node: address={node.address} name={node.name}")
         anode = self.poly.addNode(node)
         LOGGER.debug(f'got {anode}')
         self.wait_for_node_done()
