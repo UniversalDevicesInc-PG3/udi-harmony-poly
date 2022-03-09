@@ -200,7 +200,9 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 Please create a **backup** of your **ISY AND Polyglot** before doing any upgrades in case there are issues.
 
-- 3.0.5: 02/25/2022:
+- 3.0.6: 03/08/2022
+  - Call stop when asked to stop
+- 3.0.5: 02/25/2022
   - Fix crashes when building profile.
 - 3.0.4: 02/25/2022
   - Fixed: [Renamed Activities don't show up on ISY](https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly/issues/35)

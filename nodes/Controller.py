@@ -421,6 +421,7 @@ class Controller(Node):
     def handler_stop(self):
         # TODO: exit threads?
         LOGGER.warning("Stopping...")
+        self.poly.stop()
 
     def delete(self):
         LOGGER.info('Oh God I\'m being deleted. Nooooooooooooooooooooooooooooooooooooooooo.')
