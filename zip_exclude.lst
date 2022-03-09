@@ -10,3 +10,4 @@ config/*
 *.log
 profile/*/custom.xml
 profile/nls/en_us.txt
+aioharmony/*
