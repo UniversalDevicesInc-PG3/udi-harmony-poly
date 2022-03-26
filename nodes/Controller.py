@@ -29,6 +29,7 @@ class Controller(Node):
         # These start in threads cause they take a while
         self.discover_thread = None
         self.profile_thread = None
+        self.config_st = None
         self.do_poll = False
         self.lpfx = ""
         self.hb = 0
