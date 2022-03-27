@@ -200,6 +200,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 Please create a **backup** of your **ISY AND Polyglot** before doing any upgrades in case there are issues.
 
+- 3.0.8: 03/26/2022
+  - Add debugging for PG3 crash
 - 3.0.7: 03/26/2022
   - Fix check for config on startup
 - 3.0.6: 03/08/2022

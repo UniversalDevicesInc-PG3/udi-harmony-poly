@@ -19,7 +19,7 @@
         {
             "title": "udi-harmony-poly: A NodeServer for For Harmony Hub and ISY Integration",
             "author": "JimBoCA",
-            "version": "3.0.7",
+            "version": "3.0.8",
             "date": "December 29, 2017",
             "source": "https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly",
             "license": "https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly/blob/master/LICENSE"

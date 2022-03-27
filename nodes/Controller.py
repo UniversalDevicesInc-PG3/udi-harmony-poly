@@ -81,9 +81,8 @@ class Controller(Node):
         return anode
 
     def handler_start(self):
-        self.poly.Notices.clear()
-        #serverdata = self.poly.get_server_data(check_profile=False)
         LOGGER.info(f"Started HarmonyHub NodeServer {self.poly.serverdata['version']}")
+        self.poly.Notices.clear()
         # Some are getting unclosed socket warnings from sleekxmpp when thread exits that I can't get rid if so ignore them.
         warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*<socket.socket.*>")
         # Show these for now
@@ -224,7 +223,7 @@ class Controller(Node):
             self.hb = 0
 
     def handler_params(self,params):
-        LOGGER.debug(f'enter: Loading params')
+        LOGGER.debug(f'enter: Loading {params}')
         self.Params.load(params)
         self.poly.Notices.clear()
         """
