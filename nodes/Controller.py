@@ -224,6 +224,13 @@ class Controller(Node):
 
     def handler_params(self,params):
         LOGGER.debug(f'enter: Loading {params}')
+        #
+        # Clear Hubs
+        #
+        if not 'clear_hubs' in params:
+            self.Params['clear_hubs'] = "0"
+            return # Because adding param restarts me
+        #
         self.Params.load(params)
         self.poly.Notices.clear()
         """
@@ -231,11 +238,6 @@ class Controller(Node):
         """
         # Assume it's good unless it's not
         config_st = True
-        #
-        # Clear Hubs
-        #
-        #if not 'clear_hubs' in self.Params:
-        #    self.Params['clear_hubs'] = "0"
         self.config_st = config_st
         LOGGER.debug(f'exit: config_st={config_st}')
 

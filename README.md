@@ -202,6 +202,7 @@ Please create a **backup** of your **ISY AND Polyglot** before doing any upgrade
 
 - 3.0.8: 03/26/2022
   - Add debugging for PG3 crash
+  - For adding clear_hubs param
 - 3.0.7: 03/26/2022
   - Fix check for config on startup
 - 3.0.6: 03/08/2022
