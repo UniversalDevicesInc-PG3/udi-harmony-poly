@@ -277,42 +277,40 @@ class Controller(Node):
         self.setDriver('GV7', 3)
         #
         # First from customParams.
-        # TODO: Add back support of customParams
-        #
-        #for param in self.polyConfig['customParams']:
-        #    # Look for customParam starting with hub_
-        #    match = re.match( "hub_(.*)", param, re.I)
-        #    LOGGER.info('param={} match={}'.format(param,match))
-        #    if match is not None:
-        #        # The hub address is everything following the hub_
-        #        address = match.group(1)
-        #        LOGGER.info('process param={0} address={1}'.format(param,address))
-        #        # Get the customParam value which is json code
-        #        #  { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
-        #        cfg = self.polyConfig['customParams'][param]
-        #        cfgd = None
-        #        try:
-        #            cfgd = json.loads(cfg)
-        #        except:
-        #            err = sys.exc_info()[0]
-        #            LOGGER.error('failed to parse cfg={0} Error: {1}'.format(cfg,err))
-        #        if cfgd is not None:
-        #            # Check that name and host are defined.
-        #            addit = True
-        #            if not 'name' in cfgd:
-        #                LOGGER.error('No name in customParam {0} value={1}'.format(param,cfg))
-        #                addit = False
-        #            if not 'host' in cfgd:
-        #                LOGGER.error('No host in customParam {0} value={1}'.format(param,cfg))
-        #                addit = False
-        #            if addit:
-        #                hub_name = get_valid_node_name(cfgd['name'])
-        #                hub_hash = {'address': address, 'name': hub_name, 'host': cfgd['host'], 'port': 5222, 'found': True, 'custom': True}
-        #                index = next((idx for (idx, hub) in enumerate(self.hubs) if hub['name'] == hub_name), None)
-        #                if index is None:
-        #                    self.hubs.append(hub_hash)
-        #                else:
-        #                    self.hubs[index] = hub_hash
+        for param in self.Params:
+            # Look for customParam starting with hub_
+            match = re.match( "hub_(.*)", param, re.I)
+            LOGGER.info('param={} match={}'.format(param,match))
+            if match is not None:
+                # The hub address is everything following the hub_
+                address = match.group(1).lower()
+                LOGGER.info('process param={0} address={1}'.format(param,address))
+                # Get the customParam value which is json code
+                #  { "name": "HarmonyHub FamilyRoom", "host": "192.168.1.86" }
+                cfg = self.Params[param]
+                cfgd = None
+                try:
+                    cfgd = json.loads(cfg)
+                except:
+                    err = sys.exc_info()[0]
+                    LOGGER.error('failed to parse cfg={0} Error: {1}'.format(cfg,err))
+                if cfgd is not None:
+                    # Check that name and host are defined.
+                    addit = True
+                    if not 'name' in cfgd:
+                        LOGGER.error('No name in customParam {0} value={1}'.format(param,cfg))
+                        addit = False
+                    if not 'host' in cfgd:
+                        LOGGER.error('No host in customParam {0} value={1}'.format(param,cfg))
+                        addit = False
+                    if addit:
+                        hub_name = get_valid_node_name(cfgd['name'])
+                        hub_hash = {'address': address, 'name': hub_name, 'host': cfgd['host'], 'port': 5222, 'found': True, 'custom': True}
+                        index = next((idx for (idx, hub) in enumerate(self.hubs) if hub['name'] == hub_name), None)
+                        if index is None:
+                            self.hubs.append(hub_hash)
+                        else:
+                            self.hubs[index] = hub_hash
         #
         # Next the discovered ones
         #
