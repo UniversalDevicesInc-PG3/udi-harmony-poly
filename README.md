@@ -13,6 +13,8 @@ This node server is intended to support the [Logitech Harmony Hub](http://www.lo
 
 If you have any issues are questions you can ask on [PG3 Harmony Hub SubForum](https://forum.universal-devices.com/forum/311-harmonyhub/) or report an issue at [PG3 HarmonyHub Github issues](https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly/issues).
 
+**WARNING:** Do not use WiFi with the eisy, the NS will not be able to discover your hubs, you will have to enter them manually, but then there still may be communication issues between HarmonyHub and the node server...
+
 ## Moving from PG2
 
 Make sure your PG3 version is at least 3.0.38
