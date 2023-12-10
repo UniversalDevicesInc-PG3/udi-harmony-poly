@@ -185,7 +185,7 @@ class Hub(Node):
         else:
             if self.client is None:
                 LOGGER.info("Client was stopped. client{0}".format(self.client))
-                self._set_st(1)
+                self._set_st(0)
             else:
                 # Then client_status will be True when client is ready
                 if self.client_status is True:
@@ -216,6 +216,7 @@ class Hub(Node):
         # If we had a connection issue previously, try to fix it.
         if self.st == 0:
             LOGGER.debug("Calling get_client st=%d" % (self.st))
+            self._close_client()
             if not self.get_client():
                 return False
         self._set_st(1)
