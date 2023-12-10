@@ -11,3 +11,7 @@ config/*
 profile/*/custom.xml
 profile/nls/en_us.txt
 aioharmony/*
+*.cert
+*.key
+*.pid
+*.log
