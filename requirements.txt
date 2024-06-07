@@ -1,7 +1,7 @@
 udi_interface>=3.0.28
 pyaml
 #pyharmony     == 1.0.21
-sleekxmpp
+sleekxmpp-new
 netifaces
 #argparse
 #aiohttp>=3.4
