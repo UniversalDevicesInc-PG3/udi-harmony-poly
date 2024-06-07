@@ -227,7 +227,7 @@ class Controller(Node):
         #
         # Clear Hubs
         #
-        if not 'clear_hubs' in params:
+        if params is None or not 'clear_hubs' in params:
             self.Params['clear_hubs'] = "0"
             return # Because adding param restarts me
         #

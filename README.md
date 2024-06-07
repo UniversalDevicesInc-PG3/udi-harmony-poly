@@ -202,6 +202,8 @@ The HarmonyHub keeps track of the version number and when a profile rebuild is n
 
 Please create a **backup** of your **ISY AND Polyglot** before doing any upgrades in case there are issues.
 
+- 3.0.10:
+  - Switch to sleekxmpp-new which is required by latest Python
 - 3.0.9:
   - Fixed [Manual Hub IP address not working #37](https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly/issues/37)
   - Try to fix [Client fails and is not restarted](https://github.com/UniversalDevicesInc-PG3/udi-harmony-poly/issues/38)
